@@ -1,24 +1,31 @@
 {
-  description = "Packager for electron app pi-touch-calendar.";
+  description = "Flake to setup devenv for typescript/node app development";
 
-  inputs.flake-utils.url = "github:numtide/flake-utils";
+  inputs = {
+    # Node version 24.11.0
+    nixpkgs.url = "github:nixos/nixpkgs/7241bcbb4f099a66aafca120d37c65e8dda32717";
+    devenv.url = "github:cachix/devenv";
+    flake-parts.url = "github:hercules-ci/flake-parts";
+  };
 
-  outputs = { self, nixpkgs, flake-utils }:
-    {
-      overlays.default = final: prev: {
-        my-electron-app = prev.pkgs.callPackage ./package.nix {};
-      };
-    } //
-    (flake-utils.lib.eachDefaultSystem
-      (system:
-        let pkgs = import nixpkgs {
-              inherit system;
-              overlays = [ self.overlays.default ];
-            };
+  outputs = inputs@{ self, nixpkgs, flake-parts, devenv, ... }:
+    flake-parts.lib.mkFlake { inherit inputs; } {
+      imports = [ devenv.flakeModule ];
+
+      systems = [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" ];
+
+      perSystem = { system, pkgs, ... }: 
+        let
+          project-name = "node-app";
         in
-          {
-            packages.my-electron-app = pkgs.my-electron-app;
-            packages.default = pkgs.my-electron-app;
-          }
-      ));
+        {
+          devenv.shells.default = {
+            _module.args = { inherit project-name; };
+            imports = [ 
+              ./devenv.nix 
+            ];
+          };
+      };
+    };
 }
+
