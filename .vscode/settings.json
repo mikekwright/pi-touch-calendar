@@ -1,0 +1,6 @@
+{
+  "nixEnvSelector.nixFile": "${workspaceFolder}/flake.nix",
+  "debug.node.autoAttach": "on",
+  "typescript.preferences.includePackageJsonAutoImports": "on",
+  "debug.allowBreakpointsEverywhere": true
+}

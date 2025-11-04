@@ -6,8 +6,34 @@
 
   </head>
   <body>
-    <h1>💖 Hello World!</h1>
-    <p>Welcome to your Electron application.</p>
+    <h1>� Pi Touch Calendar</h1>
+    <p>Welcome to the Pi Touch Calendar application!</p>
+    <p>This is the main calendar interface.</p>
+
+    <button id="logoutBtn" style="
+      padding: 15px 30px;
+      font-size: 16px;
+      background: #dc3545;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-top: 20px;
+    ">Logout</button>
+
+    <script>
+      document.getElementById('logoutBtn').addEventListener('click', async () => {
+        try {
+          const result = await window.electronAPI.logout();
+          if (result.success) {
+            console.log('Logged out successfully');
+          }
+        } catch (error) {
+          console.error('Logout error:', error);
+        }
+      });
+    </script>
+
     <script type="module" src="/src/renderer.ts"></script>
   </body>
 </html>

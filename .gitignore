@@ -9,7 +9,10 @@ venv/
 /.env
 .envrc
 /.python-version
-.vscode/
+.vscode/*
+!.vscode/launch.json
+!.vscode/tasks.json
+!.vscode/settings.json
 .poetry_ts
 *.sw*
 *.orig
