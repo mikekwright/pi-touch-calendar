@@ -65,3 +65,4 @@ typings/
 .vite/
 out/
 
+.claude/history
