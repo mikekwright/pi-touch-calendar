@@ -2,21 +2,22 @@
 // https://www.electronjs.org/docs/latest/tutorial/process-model#preload-scripts
 
 import { contextBridge, ipcRenderer } from 'electron';
+import { IPC_CHANNELS } from '../shared/constants/ipc';
 
 // Expose protected methods that allow the renderer process to use
 // the ipcRenderer without exposing the entire object
 contextBridge.exposeInMainWorld('electronAPI', {
   login: (credentials: { username: string; password: string }) =>
-    ipcRenderer.invoke('login', credentials),
+    ipcRenderer.invoke(IPC_CHANNELS.AUTH_LOGIN, credentials),
 
   logout: () =>
-    ipcRenderer.invoke('logout'),
+    ipcRenderer.invoke(IPC_CHANNELS.AUTH_LOGOUT),
 
   onLoginSuccess: (callback: (user: any) => void) =>
-    ipcRenderer.on('login-success', (_event, user) => callback(user)),
+    ipcRenderer.on(IPC_CHANNELS.EVENT_LOGIN_SUCCESS, (_event, user) => callback(user)),
 
   removeAllListeners: (channel: string) =>
-    ipcRenderer.removeAllListeners(channel)
+    ipcRenderer.removeAllListeners(channel),
 });
 
 // Type declaration for the exposed API

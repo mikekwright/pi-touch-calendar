@@ -12,6 +12,20 @@ const config: ForgeConfig = {
     asar: true,
   },
   rebuildConfig: {},
+  hooks: {
+    packageAfterCopy: async (forgeConfig, buildPath) => {
+      // Copy login.html to the build directory so it gets included in the asar
+      const fs = require('fs');
+      const path = require('path');
+      const loginSrc = path.join(__dirname, 'login.html');
+      const loginDest = path.join(buildPath, 'login.html');
+
+      if (fs.existsSync(loginSrc)) {
+        fs.copyFileSync(loginSrc, loginDest);
+        console.log('Copied login.html to build directory');
+      }
+    },
+  },
   makers: [
     new MakerSquirrel({}),
     new MakerZIP({}, ['darwin']),
@@ -25,12 +39,12 @@ const config: ForgeConfig = {
       build: [
         {
           // `entry` is just an alias for `build.lib.entry` in the corresponding file of `config`.
-          entry: 'src/main.ts',
+          entry: 'src/main/index.ts',
           config: 'vite.main.config.ts',
           target: 'main',
         },
         {
-          entry: 'src/preload.ts',
+          entry: 'src/preload/index.ts',
           config: 'vite.preload.config.ts',
           target: 'preload',
         },

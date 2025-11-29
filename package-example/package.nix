@@ -28,7 +28,7 @@ buildNpmPackage rec {
   # The path might differ, for instance in electron-forge you need build/main/main.js
   postInstall = ''
     makeWrapper ${electron}/bin/electron $out/bin/${pname} \
-      --add-flags $out/lib/node_modules/${pname}/main.js
+      --add-flags $out/lib/node_modules/${pname}/index.js
   '';
 
 }

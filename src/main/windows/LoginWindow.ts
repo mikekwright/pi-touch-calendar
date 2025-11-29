@@ -1,16 +1,18 @@
 import { BrowserWindow } from 'electron';
 import path from 'node:path';
-import { SCREEN_CONFIG, WINDOW_DEFAULTS, DEV_SHORTCUTS, TOUCH_CONFIG } from './common';
+import { SCREEN_CONFIG, WINDOW_DEFAULTS, DEV_SHORTCUTS, TOUCH_CONFIG } from '@shared/constants';
 
-export class WindowManager {
+export class LoginWindow {
   private window: BrowserWindow | null = null;
-  private isShowingLogin: boolean = true;
 
   constructor() {
     this.createWindow();
   }
 
   private createWindow(): void {
+    // Preload is in the same directory as the main bundle (both in .vite/build)
+    const preloadPath = path.resolve(__dirname, 'preload.js');
+
     this.window = new BrowserWindow({
       width: SCREEN_CONFIG.WIDTH,
       height: SCREEN_CONFIG.HEIGHT,
@@ -21,19 +23,17 @@ export class WindowManager {
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
-        preload: path.join(__dirname, 'preload.js'),
+        preload: preloadPath,
       },
-      title: 'Pi Touch Calendar'
+      title: 'Pi Touch Calendar - Login',
     });
 
     // Add keyboard shortcuts for development
     this.window.webContents.on('before-input-event', (event, input) => {
-      // Press F11 to toggle fullscreen during development
       if (input.key === DEV_SHORTCUTS.TOGGLE_FULLSCREEN && input.type === 'keyDown') {
         const isFullScreen = this.window?.isFullScreen();
         this.window?.setFullScreen(!isFullScreen);
       }
-      // Press Escape to exit fullscreen during development
       if (input.key === DEV_SHORTCUTS.EXIT_FULLSCREEN && input.type === 'keyDown' && process.env.NODE_ENV === 'development') {
         this.window?.setFullScreen(false);
       }
@@ -44,59 +44,15 @@ export class WindowManager {
       this.window = null;
     });
 
-    // Show login by default
-    this.showLogin();
-  }
-
-  private applyWindowSettings(): void {
-    if (!this.window) return;
-
-    this.window.setFullScreen(WINDOW_DEFAULTS.fullscreen);
-    this.window.setAlwaysOnTop(WINDOW_DEFAULTS.alwaysOnTop);
-    this.window.setVisibleOnAllWorkspaces(WINDOW_DEFAULTS.visibleOnAllWorkspaces);
-  }
-
-  public showLogin(): void {
-    if (!this.window) return;
-
-    this.isShowingLogin = true;
-    this.window.setTitle('Pi Touch Calendar - Login');
-
-    // Load the login HTML content
-    this.window.loadURL(`data:text/html,${this.getLoginHTML()}`);
+    // Load the login HTML file
+    // In both test and production, __dirname is .vite/build, so login.html is ../../login.html
+    const loginHtmlPath = path.join(__dirname, '../../login.html');
+    this.window.loadFile(loginHtmlPath);
 
     // Show window when ready
     this.window.once('ready-to-show', () => {
-      this.applyWindowSettings();
-      this.window?.show();
-      this.window?.focus();
+      this.show();
     });
-  }
-
-  public showMainApp(): void {
-    if (!this.window) return;
-
-    this.isShowingLogin = false;
-    this.window.setTitle('Pi Touch Calendar');
-
-    // Load the main application
-    if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
-      this.window.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
-    } else {
-      this.window.loadFile(
-        path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`),
-      );
-    }
-
-    // Open DevTools for main app
-    if (process.env.NODE_ENV === 'development') {
-      this.window.webContents.openDevTools();
-    }
-
-    // Ensure window is visible and focused
-    this.applyWindowSettings();
-    this.window.show();
-    this.window.focus();
   }
 
   private getLoginHTML(): string {
@@ -274,23 +230,11 @@ export class WindowManager {
     `);
   }
 
-  public getWindow(): BrowserWindow | null {
-    return this.window;
-  }
-
-  public close(): void {
-    if (this.window) {
-      this.window.close();
-    }
-  }
-
-  public isLoginVisible(): boolean {
-    return this.isShowingLogin;
-  }
-
   public show(): void {
     if (this.window) {
-      this.applyWindowSettings();
+      this.window.setFullScreen(WINDOW_DEFAULTS.fullscreen);
+      this.window.setAlwaysOnTop(WINDOW_DEFAULTS.alwaysOnTop);
+      this.window.setVisibleOnAllWorkspaces(WINDOW_DEFAULTS.visibleOnAllWorkspaces);
       this.window.show();
       this.window.focus();
     }
@@ -300,5 +244,15 @@ export class WindowManager {
     if (this.window) {
       this.window.hide();
     }
+  }
+
+  public close(): void {
+    if (this.window) {
+      this.window.close();
+    }
+  }
+
+  public getWindow(): BrowserWindow | null {
+    return this.window;
   }
 }
