@@ -17,7 +17,9 @@
     "test:unit:ui": "vitest --ui",
     "test:integration": "playwright test",
     "test:integration:ui": "playwright test --ui",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "create-pincode": "tsx scripts/create-pincode.ts",
+    "reset-pincode": "rm -f ~/.config/pi-touch-calendar/credentials.json && echo '✅ Pincode reset. App will show first-time setup on next launch.'"
   },
   "keywords": [],
   "author": {
@@ -54,6 +56,7 @@
     "eslint-plugin-import": "^2.32.0",
     "happy-dom": "^20.0.11",
     "jsdom": "^27.2.0",
+    "tsx": "^4.21.0",
     "typescript": "~4.5.4",
     "vite": "^5.4.21",
     "vitest": "^4.0.14"

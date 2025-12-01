@@ -1,70 +1,57 @@
-import { LoginWindow } from './LoginWindow';
 import { MainWindow } from './MainWindow';
 
+/**
+ * WindowManager - Manages application windows
+ *
+ * With the new React-based architecture, we use a single window
+ * that shows different views (login/main app) based on auth state.
+ * The React App component handles the routing between views.
+ */
 export class WindowManager {
-  private loginWindow: LoginWindow | null = null;
   private mainWindow: MainWindow | null = null;
-  private isShowingLogin: boolean = true;
 
   constructor() {
-    this.showLogin();
-  }
-
-  public showLogin(): void {
-    this.isShowingLogin = true;
-
-    // Close main window if it exists
-    if (this.mainWindow) {
-      this.mainWindow.close();
-      this.mainWindow = null;
-    }
-
-    // Create or show login window
-    if (!this.loginWindow) {
-      this.loginWindow = new LoginWindow();
-    } else {
-      this.loginWindow.show();
-    }
-  }
-
-  public showMainApp(): void {
-    this.isShowingLogin = false;
-
-    // In test mode, don't close the login window to allow Playwright to continue testing
-    // Just hide it instead
-    if (process.env.NODE_ENV === 'test') {
-      if (this.loginWindow) {
-        this.loginWindow.hide();
-      }
-    } else {
-      // Close login window if it exists (production mode)
-      if (this.loginWindow) {
-        this.loginWindow.close();
-        this.loginWindow = null;
-      }
-    }
-
-    // Create or show main window
-    if (!this.mainWindow) {
-      this.mainWindow = new MainWindow();
-      this.mainWindow.load();
-    }
-
+    // Create and show the main window
+    // The React app will handle showing login or main app based on auth state
+    this.mainWindow = new MainWindow();
+    this.mainWindow.load();
     this.mainWindow.show();
   }
 
+  /**
+   * showLogin - Legacy method for backward compatibility
+   * Now a no-op since React app handles login view
+   */
+  public showLogin(): void {
+    // React app handles showing login screen
+    // This method exists for backward compatibility with IPC handlers
+  }
+
+  /**
+   * showMainApp - Legacy method for backward compatibility
+   * Now a no-op since React app handles main app view
+   */
+  public showMainApp(): void {
+    // React app handles showing main app screen
+    // This method exists for backward compatibility with IPC handlers
+  }
+
+  /**
+   * isLoginVisible - Legacy method for backward compatibility
+   */
   public isLoginVisible(): boolean {
-    return this.isShowingLogin;
+    // Always return false since React app manages view state
+    return false;
   }
 
   public close(): void {
-    if (this.loginWindow) {
-      this.loginWindow.close();
-      this.loginWindow = null;
-    }
     if (this.mainWindow) {
       this.mainWindow.close();
       this.mainWindow = null;
     }
+  }
+
+  public getMainWindow(): MainWindow | null {
+    return this.mainWindow;
   }
 }

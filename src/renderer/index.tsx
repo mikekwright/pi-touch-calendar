@@ -3,9 +3,21 @@
  * This file is loaded by index.html and initializes the React application
  */
 
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import { App } from './App';
 import './styles/globals.css';
 
-console.log('👋 This message is being logged by "renderer/index.tsx", included via Vite');
+// Mount React application
+const rootElement = document.getElementById('root');
 
-// This is a placeholder until we implement the full React application in Phase 1+
-// The current UI is inline in index.html
+if (!rootElement) {
+  throw new Error('Failed to find root element. Ensure index.html has <div id="root"></div>');
+}
+
+const root = createRoot(rootElement);
+root.render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);

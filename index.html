@@ -2,38 +2,32 @@
 <html>
   <head>
     <meta charset="UTF-8" />
-    <title>Hello World!</title>
+    <title>Pi Touch Calendar</title>
+    <style>
+      /* Kiosk optimizations for 1920x1080 display */
+      * {
+        box-sizing: border-box;
+      }
 
+      html, body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      #root {
+        width: 100%;
+        height: 100%;
+      }
+    </style>
   </head>
   <body>
-    <h1>� Pi Touch Calendar</h1>
-    <p>Welcome to the Pi Touch Calendar application!</p>
-    <p>This is the main calendar interface.</p>
-
-    <button id="logoutBtn" style="
-      padding: 15px 30px;
-      font-size: 16px;
-      background: #dc3545;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      margin-top: 20px;
-    ">Logout</button>
-
-    <script>
-      document.getElementById('logoutBtn').addEventListener('click', async () => {
-        try {
-          const result = await window.electronAPI.logout();
-          if (result.success) {
-            console.log('Logged out successfully');
-          }
-        } catch (error) {
-          console.error('Logout error:', error);
-        }
-      });
-    </script>
-
+    <div id="root"></div>
     <script type="module" src="/src/renderer/index.tsx"></script>
   </body>
 </html>
