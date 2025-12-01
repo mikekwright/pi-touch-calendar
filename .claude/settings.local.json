@@ -59,7 +59,8 @@
       "Bash(node -c:*)",
       "Bash(cat:*)",
       "Bash(tree:*)",
-      "Bash(npm run test:unit:*)"
+      "Bash(npm run test:unit:*)",
+      "Bash(npm run test:coverage:*)"
     ],
     "deny": [],
     "ask": []
