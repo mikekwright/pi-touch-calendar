@@ -1,10 +1,12 @@
 import { defineConfig } from 'vitest/config';
+import react from '@vitejs/plugin-react';
 import path from 'path';
 
 export default defineConfig({
+  plugins: [react()],
   test: {
     // Test environment
-    environment: 'happy-dom', // Use happy-dom for React component tests
+    environment: 'jsdom', // Use jsdom for React component tests
 
     // Global test setup
     globals: true,

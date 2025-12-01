@@ -1,1103 +1,1178 @@
 # Pi Touch Calendar - TODO List
 
 ## Current Status
-The application has the basic Electron + Vite + TypeScript foundation with a login system and window management infrastructure. This TODO list tracks all remaining features and improvements needed to reach the full vision outlined in AI_DEVELOPMENT_PROMPT.md.
+The application has a basic Electron + Vite + TypeScript foundation with window management and placeholder directory structure. This TODO tracks all features needed to meet the requirements in REQUIREMENTS.md.
 
-## 🎯 Key Principles
+**Current Progress: ~15% Complete**
 
-**Testing Requirements:**
-- ✅ Every feature MUST include unit tests
-- ✅ Every feature MUST include at least one Playwright integration test
+## 🎯 Key Requirements from REQUIREMENTS.md
+
+### Core Features Required:
+1. **Pincode Authentication** (4-8 digits, no username, config file in ~/.config/pi-touch-calendar/)
+2. **Google OAuth Integration** (QR code authentication for calendar, tasks, drive, email)
+3. **Calendar Page** (landing page showing selected calendars, tomorrow's schedule, carousel navigation)
+4. **Chore Page** (Google Sheets-based, per-child sheets, daily auto-pull at 2am, SQLite storage)
+5. **Chore Tracking** (Daily stats pushed to Google Sheets, completion tracking)
+6. **Touch-First UI** (Pink/rose gold theme, large buttons, no text input, navigation via buttons)
+7. **Kiosk Mode** (Raspberry Pi deployment, fullscreen, auto-start)
+
+### Technical Requirements:
+- Config directory: `~/.config/pi-touch-calendar/`
+- Google Sheets: `pi-touch-calendar-chores` (configurable via PI_CHORE_SHEET_NAME)
+- Stats Sheet: `pi-touch-calendar-chores-stats` (configurable via PI_CHORE_RESULTS_SHEET_NAME)
+- Authentication logs rotated daily, kept for 90 days
+- SQLite database for chore tracking and completion status
+
+---
+
+## 🎯 Testing Standards
+
+**Every feature MUST include:**
+- ✅ Unit tests for all business logic and utilities
+- ✅ Unit tests for all repositories and services
+- ✅ Component tests for all React components
+- ✅ At least one Playwright integration test per major feature
 - ✅ Minimum 70% code coverage target
-- ✅ Test runner: Vitest (unit) + Playwright (integration/E2E)
 
-**Architecture Standards:**
-- 📁 Follow the standardized file structure (Phase 0)
-- 🔧 Separation of concerns: Main process / Renderer / Database layers
-- 🗃️ Repository pattern for all database operations
-- 🎨 Component-based UI architecture
-- 🔌 Clear IPC communication boundaries
-
-**File Organization:**
+**Test File Structure:**
 ```
-src/
-├── main/          # Main process (Electron)
-│   ├── services/  # Business logic
-│   ├── database/  # Data layer
-│   └── ipc/       # IPC handlers
-├── renderer/      # UI (React)
-│   ├── components/
-│   ├── pages/
-│   └── store/
-└── shared/        # Shared types/utils
+src/main/services/auth/
+  ├── AuthService.ts
+  └── __tests__/
+      └── AuthService.test.ts
+
+src/renderer/components/calendar/
+  ├── CalendarPage.tsx
+  └── __tests__/
+      └── CalendarPage.test.tsx
+
+test/integration/
+  └── auth.spec.ts
 ```
 
 ---
 
-## Phase 0: Application Restructure & Testing Setup
+## 🚨 CRITICAL BLOCKERS (Must Fix First)
 
-### File Structure Reorganization
-- [ ] Restructure application to follow standard Electron architecture patterns
-  - [ ] Create new directory structure:
-    ```
-    src/
-    ├── main/                    # Main process code
-    │   ├── index.ts            # Main entry point
-    │   ├── windows/            # Window management
-    │   │   ├── MainWindow.ts
-    │   │   └── LoginWindow.ts
-    │   ├── services/           # Business logic services
-    │   │   ├── auth/
-    │   │   │   ├── AuthService.ts
-    │   │   │   └── __tests__/
-    │   │   ├── calendar/
-    │   │   │   ├── CalendarService.ts
-    │   │   │   ├── GoogleCalendarSync.ts
-    │   │   │   └── __tests__/
-    │   │   ├── tasks/
-    │   │   │   ├── TaskService.ts
-    │   │   │   └── __tests__/
-    │   │   └── rewards/
-    │   │       ├── RewardService.ts
-    │   │       └── __tests__/
-    │   ├── database/           # Database layer
-    │   │   ├── connection.ts
-    │   │   ├── migrations/
-    │   │   ├── models/
-    │   │   │   ├── User.ts
-    │   │   │   ├── Profile.ts
-    │   │   │   ├── Task.ts
-    │   │   │   ├── Event.ts
-    │   │   │   └── Reward.ts
-    │   │   ├── repositories/
-    │   │   │   ├── UserRepository.ts
-    │   │   │   ├── TaskRepository.ts
-    │   │   │   ├── EventRepository.ts
-    │   │   │   └── __tests__/
-    │   │   └── seeds/
-    │   ├── ipc/                # IPC handlers
-    │   │   ├── handlers/
-    │   │   │   ├── auth.ts
-    │   │   │   ├── calendar.ts
-    │   │   │   ├── tasks.ts
-    │   │   │   ├── profiles.ts
-    │   │   │   └── __tests__/
-    │   │   └── channels.ts     # IPC channel constants
-    │   ├── utils/              # Utility functions
-    │   │   ├── logger.ts
-    │   │   ├── encryption.ts
-    │   │   ├── validators.ts
-    │   │   └── __tests__/
-    │   └── config/             # Configuration
-    │       ├── constants.ts
-    │       ├── database.ts
-    │       └── app.ts
-    ├── renderer/               # Renderer process code
-    │   ├── index.tsx           # React entry point
-    │   ├── App.tsx             # Root component
-    │   ├── components/         # Reusable UI components
-    │   │   ├── common/
-    │   │   │   ├── Button/
-    │   │   │   │   ├── Button.tsx
-    │   │   │   │   ├── Button.module.css
-    │   │   │   │   └── __tests__/
-    │   │   │   ├── Modal/
-    │   │   │   └── Input/
-    │   │   ├── calendar/
-    │   │   │   ├── MonthView/
-    │   │   │   ├── WeekView/
-    │   │   │   ├── EventCard/
-    │   │   │   └── __tests__/
-    │   │   ├── tasks/
-    │   │   │   ├── TaskList/
-    │   │   │   ├── TaskCard/
-    │   │   │   ├── TaskForm/
-    │   │   │   └── __tests__/
-    │   │   └── rewards/
-    │   │       ├── RewardAnimation/
-    │   │       ├── AchievementBadge/
-    │   │       └── __tests__/
-    │   ├── pages/              # Page components
-    │   │   ├── Login/
-    │   │   │   ├── Login.tsx
-    │   │   │   ├── Login.module.css
-    │   │   │   └── __tests__/
-    │   │   ├── Calendar/
-    │   │   ├── Tasks/
-    │   │   ├── Profiles/
-    │   │   └── Settings/
-    │   ├── hooks/              # Custom React hooks
-    │   │   ├── useCalendar.ts
-    │   │   ├── useTasks.ts
-    │   │   ├── useAuth.ts
-    │   │   └── __tests__/
-    │   ├── store/              # State management
-    │   │   ├── index.ts
-    │   │   ├── slices/
-    │   │   │   ├── authSlice.ts
-    │   │   │   ├── calendarSlice.ts
-    │   │   │   ├── taskSlice.ts
-    │   │   │   └── __tests__/
-    │   │   └── middleware/
-    │   ├── services/           # Renderer-side API calls
-    │   │   ├── api.ts
-    │   │   └── ipc.ts
-    │   ├── styles/             # Global styles
-    │   │   ├── globals.css
-    │   │   ├── variables.css
-    │   │   └── themes/
-    │   ├── utils/              # Renderer utilities
-    │   │   ├── dateHelpers.ts
-    │   │   ├── formatters.ts
-    │   │   └── __tests__/
-    │   └── types/              # TypeScript types
-    │       ├── calendar.ts
-    │       ├── task.ts
-    │       └── user.ts
-    ├── preload/                # Preload scripts
-    │   ├── index.ts
-    │   └── api.ts
-    ├── shared/                 # Shared between main and renderer
-    │   ├── types/
-    │   ├── constants/
-    │   └── utils/
-    └── assets/                 # Static assets
-        ├── icons/
-        ├── sounds/
-        └── images/
-    ```
-  - [ ] Migrate existing code to new structure
-    - [ ] Move main.ts logic to src/main/index.ts
-    - [ ] Move window-manager.ts to src/main/windows/
-    - [ ] Refactor login.ts to src/main/windows/LoginWindow.ts
-    - [ ] Move preload.ts to src/preload/index.ts
-    - [ ] Move renderer.ts to src/renderer/index.tsx
-    - [ ] Move common.ts to src/shared/constants/
-  - [ ] Update all import paths throughout the codebase
-  - [ ] Update Vite config files for new structure
-  - [ ] Update tsconfig.json with path aliases
-  - [ ] Test that application still builds and runs
+### 1. Install Missing Dependencies
+- [ ] Install React and React DOM
+  ```bash
+  npm install react react-dom
+  npm install --save-dev @types/react @types/react-dom
+  ```
+- [ ] Install Google APIs client library
+  ```bash
+  npm install googleapis
+  npm install google-auth-library
+  ```
+- [ ] Install SQLite database library
+  ```bash
+  npm install better-sqlite3
+  npm install --save-dev @types/better-sqlite3
+  ```
+- [ ] Install QR code generation library
+  ```bash
+  npm install qrcode
+  npm install --save-dev @types/qrcode
+  ```
+- [ ] Install testing dependencies
+  ```bash
+  npm install --save-dev vitest @vitest/ui @testing-library/react @testing-library/jest-dom
+  npm install --save-dev @playwright/test
+  ```
 
-### Testing Infrastructure Setup
-- [ ] Install and configure testing frameworks
-  - [ ] Install Vitest for unit testing
-  - [ ] Install @testing-library/react for component testing
-  - [ ] Install Playwright for E2E/integration testing
-  - [ ] Install @playwright/test for Electron testing
-  - [ ] Configure test scripts in package.json
+### 2. Remove Incorrect Authentication System
+- [ ] Remove username/password demo authentication from `src/main/login.ts:27-47`
+- [ ] Remove demo credentials validation
+- [ ] Remove username field from login UI
 
-- [ ] Set up Vitest configuration
-  - [ ] Create vitest.config.ts
-  - [ ] Configure coverage reporting (c8/istanbul)
-  - [ ] Set up test globals and environment
-  - [ ] Configure DOM environment for React tests
-  - [ ] Add test:unit script
+### 3. Update Vite Configuration
+- [ ] Update `vite.renderer.config.ts` to support React JSX
+- [ ] Add React plugin to Vite config
+- [ ] Configure path aliases for cleaner imports
 
-- [ ] Set up Playwright configuration
-  - [ ] Create playwright.config.ts for Electron
-  - [ ] Configure Playwright for Electron app testing
-  - [ ] Set up test fixtures for app launch
-  - [ ] Configure screenshot/video capture on failure
-  - [ ] Add test:integration script
-  - [ ] Create example E2E test for login flow
-
-- [ ] Create testing utilities
-  - [ ] Create test/utils/setup.ts for global test setup
-  - [ ] Create database test helpers (in-memory DB)
-  - [ ] Create mock IPC helpers
-  - [ ] Create component render helpers
-  - [ ] Create test data factories/fixtures
-
-- [ ] Set up CI/CD test integration (optional)
-  - [ ] Add GitHub Actions workflow for tests
-  - [ ] Configure test coverage reporting
-  - [ ] Add test status badges to README
-
-### Testing Standards Documentation
-- [ ] Create TESTING.md guide
-  - [ ] Document unit test patterns
-  - [ ] Document integration test patterns
-  - [ ] Document test file naming conventions
-  - [ ] Provide examples of good tests
-  - [ ] Define coverage targets (70% minimum)
+### 4. Set Up Testing Infrastructure
+- [ ] Create `vitest.config.ts` with coverage settings
+- [ ] Create `playwright.config.ts` for Electron testing
+- [ ] Create test utilities directory `test/utils/`
+- [ ] Create test fixtures directory `test/fixtures/`
+- [ ] Add test scripts to package.json (test:unit, test:integration, test:coverage)
 
 ---
 
-## Phase 1: Core Infrastructure & Data Layer
+## Phase 1: Authentication & Configuration (Week 1-2)
 
-### Database & Storage
-- [ ] Set up SQLite database infrastructure
-  - [ ] Install and configure better-sqlite3 or similar SQLite library
-  - [ ] Create database schema for users, profiles, tasks, settings
-  - [ ] Implement database migration system in src/main/database/migrations/
-  - [ ] Add encrypted storage for sensitive data (OAuth tokens)
-  - [ ] Create database service layer in src/main/database/
-  - [ ] Create repository pattern in src/main/database/repositories/
-  - [ ] Add IPC handlers for database operations in src/main/ipc/handlers/
-  - [ ] **Unit Tests:**
-    - [ ] Test database connection (connection.test.ts)
-    - [ ] Test each repository CRUD operation
-    - [ ] Test migration system (up/down)
-    - [ ] Test encryption/decryption utilities
-  - [ ] **Integration Test (Playwright):**
-    - [ ] Test full database lifecycle (create, read, update, delete) via app
+### Pincode Authentication System
+- [ ] Create configuration directory handler
+  - [ ] Create `src/main/config/ConfigManager.ts`
+  - [ ] Implement config directory creation at `~/.config/pi-touch-calendar/`
+  - [ ] Create credential file handler for pincode storage
+  - [ ] Add file permissions check (ensure user-only access)
+  - [ ] Add validation for 4-8 digit pincode
 
-### User Profile System
-- [ ] Enhance user authentication beyond demo system
-  - [ ] Create User model in src/main/database/models/User.ts
-  - [ ] Create UserRepository in src/main/database/repositories/
-  - [ ] Implement AuthService in src/main/services/auth/
-  - [ ] Implement secure password storage (bcrypt/argon2)
-  - [ ] Add user profile data model (name, avatar, role, preferences)
-  - [ ] Create admin vs regular user role system
-  - [ ] **Unit Tests:**
-    - [ ] Test UserRepository CRUD operations
-    - [ ] Test AuthService.login()
-    - [ ] Test AuthService.logout()
-    - [ ] Test password hashing and verification
-    - [ ] Test role-based access control
-  - [ ] **Integration Test (Playwright):**
-    - [ ] Test complete login flow with valid credentials
-    - [ ] Test login failure with invalid credentials
-    - [ ] Test logout flow
+- [ ] Replace login system with pincode
+  - [ ] Update `src/main/login.ts` to use pincode authentication
+  - [ ] Remove username field from LoginWindow
+  - [ ] Add pincode input (numeric only, masked)
+  - [ ] Create pincode verification logic
+  - [ ] Update IPC handlers in `src/main/index.ts:93-106`
 
-- [ ] Build profile management UI
-  - [ ] Create Profile page in src/renderer/pages/Profiles/
-  - [ ] Create ProfileCard component
-  - [ ] Create ProfileForm component
-  - [ ] Implement profile picture/avatar upload and storage
-  - [ ] Create profile switcher interface (large touch-friendly avatars)
-  - [ ] Add child-friendly profile switching (no password for non-admin)
-  - [ ] Implement guest access mode
-  - [ ] Add profile settings page (per-user preferences)
-  - [ ] **Unit Tests:**
-    - [ ] Test ProfileCard component rendering
-    - [ ] Test ProfileForm validation
-    - [ ] Test avatar upload functionality
-    - [ ] Test profile switcher component
-  - [ ] **Integration Test (Playwright):**
-    - [ ] Test creating a new profile
-    - [ ] Test editing an existing profile
-    - [ ] Test switching between profiles
-    - [ ] Test avatar upload end-to-end
+- [ ] Create initial setup flow
+  - [ ] Detect if pincode exists (first-time setup)
+  - [ ] Create setup wizard for initial pincode creation
+  - [ ] Add pincode confirmation field
+  - [ ] Store hashed pincode in config file
 
-### State Management
-- [ ] Choose and implement state management solution
-  - [ ] Evaluate options (Zustand, Redux Toolkit, Context API)
-  - [ ] Set up store in src/renderer/store/
-  - [ ] Create authSlice in src/renderer/store/slices/
-  - [ ] Create calendarSlice for calendar data
-  - [ ] Create taskSlice for tasks and rewards
-  - [ ] Implement state persistence to localStorage
-  - [ ] Add middleware for IPC sync
-  - [ ] **Unit Tests:**
-    - [ ] Test each slice reducer
-    - [ ] Test action creators
-    - [ ] Test selectors
-    - [ ] Test state persistence
-    - [ ] Test middleware logic
-  - [ ] **Integration Test (Playwright):**
-    - [ ] Test state updates propagate to UI
-    - [ ] Test state persists across app restarts
+### Authentication Logging
+- [ ] Create logging service
+  - [ ] Create `src/main/services/logging/AuthLogger.ts`
+  - [ ] Log all authentication attempts with timestamp
+  - [ ] Store logs in `~/.config/pi-touch-calendar/logs/`
+  - [ ] Implement daily log rotation
+  - [ ] Implement 90-day log cleanup (scheduled task)
+  - [ ] Add log format: timestamp, success/failure, IP (if applicable)
 
-### Logging & Error Handling
-- [ ] Implement comprehensive logging system
-  - [ ] Add winston logging library
-  - [ ] Create Logger utility in src/main/utils/logger.ts
-  - [ ] Create log levels (debug, info, warn, error)
-  - [ ] Set up log file rotation
-  - [ ] Add error boundary components in src/renderer/components/common/ErrorBoundary/
-  - [ ] Implement global error handler in main process
-  - [ ] Create user-friendly error display component
-  - [ ] **Unit Tests:**
-    - [ ] Test logger writes to file
-    - [ ] Test log rotation
-    - [ ] Test different log levels
-    - [ ] Test ErrorBoundary component catches errors
-  - [ ] **Integration Test (Playwright):**
-    - [ ] Test error logging end-to-end
-    - [ ] Test UI displays error messages correctly
+### ✅ Phase 1 Testing Requirements
+- [ ] **Unit Tests** - Create `src/main/config/__tests__/ConfigManager.test.ts`
+  - [ ] Test config directory creation
+  - [ ] Test credential file creation and reading
+  - [ ] Test file permissions validation (user-only access)
+  - [ ] Test pincode validation (4-8 digits)
+  - [ ] Test invalid pincode rejection (too short, too long, non-numeric)
+  - [ ] Test config file not found handling
+
+- [ ] **Unit Tests** - Create `src/main/services/auth/__tests__/PincodeAuth.test.ts`
+  - [ ] Test pincode hashing
+  - [ ] Test pincode verification (correct pincode)
+  - [ ] Test pincode verification (incorrect pincode)
+  - [ ] Test first-time setup detection
+  - [ ] Test pincode storage
+  - [ ] Test pincode retrieval
+
+- [ ] **Unit Tests** - Create `src/main/services/logging/__tests__/AuthLogger.test.ts`
+  - [ ] Test log entry creation
+  - [ ] Test log file writing
+  - [ ] Test log rotation (daily)
+  - [ ] Test old log cleanup (90 days)
+  - [ ] Test log format validation
+  - [ ] Test concurrent log writes
+
+- [ ] **Component Tests** - Create `src/renderer/components/__tests__/PincodeInput.test.tsx`
+  - [ ] Test pincode input renders
+  - [ ] Test numeric-only input validation
+  - [ ] Test masking of pincode input
+  - [ ] Test pincode submission
+  - [ ] Test error message display
+
+- [ ] **Integration Tests** - Create `test/integration/auth.spec.ts`
+  - [ ] Test first-time setup flow (create pincode, confirm, save)
+  - [ ] Test successful login with correct pincode
+  - [ ] Test failed login with incorrect pincode
+  - [ ] Test pincode authentication end-to-end
+  - [ ] Test authentication logging end-to-end
+
+- [ ] **Coverage Verification**
+  - [ ] Run coverage report: `npm run test:coverage`
+  - [ ] Verify ConfigManager has >70% coverage
+  - [ ] Verify PincodeAuth has >70% coverage
+  - [ ] Verify AuthLogger has >70% coverage
 
 ---
 
-## Phase 2: Google Calendar Integration
+## Phase 2: Google OAuth Integration (Week 3-4)
 
-### OAuth & Authentication
-- [ ] Set up Google Calendar API integration
-  - [ ] Create Google Cloud project and enable Calendar API
-  - [ ] Configure OAuth 2.0 credentials
-  - [ ] Implement OAuth flow in src/main/services/calendar/GoogleOAuthService.ts
-  - [ ] Handle OAuth redirects in Electron
-  - [ ] Store OAuth tokens securely (encrypted) in database
-  - [ ] Add token refresh logic
-  - [ ] Implement token expiration handling
-  - [ ] **Unit Tests:**
-    - [ ] Test OAuth URL generation
-    - [ ] Test token exchange flow
-    - [ ] Test token refresh logic
-    - [ ] Test token expiration detection
-    - [ ] Test encrypted token storage/retrieval
-  - [ ] **Integration Test (Playwright):**
-    - [ ] Test complete OAuth flow (with mocked Google endpoints)
-    - [ ] Test token refresh when expired
+### OAuth Setup & Configuration
+- [ ] Create Google OAuth service
+  - [ ] Create `src/main/services/google/GoogleOAuthService.ts`
+  - [ ] Implement OAuth 2.0 flow for Google APIs
+  - [ ] Request scopes: email, calendar, tasks, drive (sheets)
+  - [ ] Store OAuth credentials in config directory (encrypted)
+  - [ ] Implement token refresh logic
+  - [ ] Handle token expiration gracefully
 
-### Calendar Data Management
-- [ ] Build calendar synchronization system
-  - [ ] Create Event model in src/main/database/models/Event.ts
-  - [ ] Create EventRepository in src/main/database/repositories/
-  - [ ] Implement CalendarService in src/main/services/calendar/
-  - [ ] Implement GoogleCalendarSync in src/main/services/calendar/
-  - [ ] Implement initial calendar fetch (last 30 days, next 90 days)
-  - [ ] Add support for multiple Google accounts per user
-  - [ ] Build calendar caching system (SQLite storage)
-  - [ ] Implement periodic sync (configurable interval, default 15 min)
-  - [ ] Add manual refresh option
-  - [ ] Handle API rate limits and errors gracefully
-  - [ ] Support for recurring events
-  - [ ] Support for all-day events
-  - [ ] Support for multi-day events
-  - [ ] Parse and store event metadata (color, description, location)
-  - [ ] **Unit Tests:**
-    - [ ] Test EventRepository CRUD operations
-    - [ ] Test GoogleCalendarSync.fetchEvents()
-    - [ ] Test recurring event parsing
-    - [ ] Test all-day event handling
-    - [ ] Test multi-day event handling
-    - [ ] Test event caching logic
-    - [ ] Test sync interval scheduling
-    - [ ] Test API rate limit handling
-  - [ ] **Integration Test (Playwright):**
-    - [ ] Test calendar sync from Google (mocked API)
-    - [ ] Test periodic sync updates UI
-    - [ ] Test manual refresh button
+### QR Code Authentication Flow
+- [ ] Implement QR code authentication
+  - [ ] Create local HTTP server for OAuth callback (localhost only)
+  - [ ] Generate OAuth authorization URL
+  - [ ] Generate QR code from authorization URL
+  - [ ] Display QR code in UI (renderer process)
+  - [ ] Handle OAuth callback from mobile device
+  - [ ] Exchange authorization code for access token
+  - [ ] Store tokens securely in config directory
+  - [ ] Close HTTP server after successful authentication
 
-### Calendar UI Components
-- [ ] Create calendar account management UI
-  - [ ] Create CalendarSettings page in src/renderer/pages/Settings/
-  - [ ] Create AddAccountButton component
-  - [ ] Create AccountList component
-  - [ ] Implement "Add Google Account" button and flow
-  - [ ] List connected accounts
-  - [ ] Remove/disconnect account functionality
-  - [ ] Account-specific color coding
-  - [ ] Calendar source visibility toggles
-  - [ ] **Unit Tests:**
-    - [ ] Test AddAccountButton component
-    - [ ] Test AccountList rendering
-    - [ ] Test account removal confirmation
-    - [ ] Test visibility toggle state
-  - [ ] **Integration Test (Playwright):**
-    - [ ] Test adding a Google account
-    - [ ] Test removing an account
-    - [ ] Test toggling calendar visibility
+### OAuth Token Management
+- [ ] Create token storage service
+  - [ ] Create `src/main/services/google/TokenManager.ts`
+  - [ ] Encrypt tokens before storage
+  - [ ] Decrypt tokens on retrieval
+  - [ ] Check token validity on app start
+  - [ ] Auto-refresh expired tokens
+  - [ ] Handle refresh token expiration (re-authenticate)
 
-### Offline Support
-- [ ] Implement offline-first architecture
-  - [ ] Cache calendar data locally (EventRepository)
-  - [ ] Display cached data when offline
-  - [ ] Add offline indicator component in UI
-  - [ ] Queue changes for sync when connection restored
-  - [ ] **Unit Tests:**
-    - [ ] Test offline detection
-    - [ ] Test loading cached data
-    - [ ] Test sync queue mechanism
-  - [ ] **Integration Test (Playwright):**
-    - [ ] Test app works offline with cached data
-    - [ ] Test offline indicator displays
-    - [ ] Test sync resumes when online
+### App Startup Flow
+- [ ] Update startup logic
+  - [ ] Check if Google OAuth token exists in `src/main/index.ts`
+  - [ ] If token exists and valid, skip pincode → go to calendar page
+  - [ ] If no token or invalid, show pincode screen
+  - [ ] After pincode, check OAuth status
+  - [ ] If not authenticated with Google, show QR code screen
+
+### ✅ Phase 2 Testing Requirements
+- [ ] **Unit Tests** - Create `src/main/services/google/__tests__/GoogleOAuthService.test.ts`
+  - [ ] Test OAuth URL generation
+  - [ ] Test authorization code exchange
+  - [ ] Test token storage (encrypted)
+  - [ ] Test token retrieval (decrypted)
+  - [ ] Test token refresh logic
+  - [ ] Test token expiration detection
+  - [ ] Test scope validation (calendar, tasks, drive, email)
+  - [ ] Test error handling for invalid tokens
+
+- [ ] **Unit Tests** - Create `src/main/services/google/__tests__/TokenManager.test.ts`
+  - [ ] Test token encryption
+  - [ ] Test token decryption
+  - [ ] Test token validation
+  - [ ] Test token refresh scheduling
+  - [ ] Test expired token handling
+  - [ ] Test missing token handling
+
+- [ ] **Unit Tests** - Create `src/main/services/google/__tests__/QRCodeService.test.ts`
+  - [ ] Test QR code generation from URL
+  - [ ] Test QR code data encoding
+  - [ ] Test QR code image format
+  - [ ] Test error handling for invalid URLs
+
+- [ ] **Unit Tests** - Create `src/main/services/google/__tests__/OAuthCallbackServer.test.ts`
+  - [ ] Test HTTP server creation
+  - [ ] Test callback endpoint handling
+  - [ ] Test authorization code extraction
+  - [ ] Test server shutdown after callback
+  - [ ] Test localhost binding
+  - [ ] Test timeout handling
+
+- [ ] **Component Tests** - Create `src/renderer/components/__tests__/QRCodeDisplay.test.tsx`
+  - [ ] Test QR code component renders
+  - [ ] Test QR code image display
+  - [ ] Test loading state
+  - [ ] Test error state
+  - [ ] Test instructions display
+
+- [ ] **Integration Tests** - Create `test/integration/oauth.spec.ts`
+  - [ ] Test OAuth flow with mocked Google endpoints
+  - [ ] Test QR code display in UI
+  - [ ] Test callback handling
+  - [ ] Test token storage end-to-end
+  - [ ] Test token refresh on expiration
+  - [ ] Test app startup with valid token (skip pincode)
+  - [ ] Test app startup with invalid token (show pincode)
+
+- [ ] **Coverage Verification**
+  - [ ] Run coverage report: `npm run test:coverage`
+  - [ ] Verify GoogleOAuthService has >70% coverage
+  - [ ] Verify TokenManager has >70% coverage
+  - [ ] Verify QRCodeService has >70% coverage
 
 ---
 
-## Phase 3: Calendar Display & Views
+## Phase 3: Calendar Integration (Week 5-6)
 
-### Month View (Priority)
-- [ ] Design and implement month calendar view
-  - [ ] Create MonthView component in src/renderer/components/calendar/MonthView/
-  - [ ] Create DayCell component for grid cells
-  - [ ] Create month grid layout (responsive)
-  - [ ] Display events in day cells
-  - [ ] Handle overflow events (show count, expand on tap)
+### Google Calendar API Integration
+- [ ] Create calendar service
+  - [ ] Create `src/main/services/google/CalendarService.ts`
+  - [ ] Implement Google Calendar API client
+  - [ ] Fetch user's calendar list
+  - [ ] Fetch events from selected calendars
+  - [ ] Parse and normalize calendar events
+  - [ ] Handle recurring events
+  - [ ] Handle all-day events
+  - [ ] Handle multi-day events
+
+### Calendar Data Storage
+- [ ] Create SQLite database schema
+  - [ ] Create `src/main/database/schema.sql`
+  - [ ] Create calendars table (id, name, color, enabled)
+  - [ ] Create events table (id, calendar_id, title, start, end, description, location)
+  - [ ] Create database initialization in `src/main/database/db.ts`
+  - [ ] Implement migrations system
+
+- [ ] Create calendar repository
+  - [ ] Create `src/main/repositories/CalendarRepository.ts`
+  - [ ] Implement CRUD operations for calendars
+  - [ ] Implement CRUD operations for events
+  - [ ] Implement query for today's events
+  - [ ] Implement query for tomorrow's events
+  - [ ] Implement query for date range
+
+### Calendar Sync Service
+- [ ] Implement calendar synchronization
+  - [ ] Create `src/main/services/google/CalendarSyncService.ts`
+  - [ ] Implement initial sync (fetch all enabled calendars)
+  - [ ] Implement periodic sync (every 15-30 minutes)
+  - [ ] Implement manual refresh trigger
+  - [ ] Handle sync errors gracefully
+  - [ ] Update local database with fetched events
+  - [ ] Remove deleted events from local database
+  - [ ] Implement delta sync (incremental updates)
+
+### ✅ Phase 3 Testing Requirements
+- [ ] **Unit Tests** - Create `src/main/services/google/__tests__/CalendarService.test.ts`
+  - [ ] Test Google Calendar API client initialization
+  - [ ] Test fetch calendar list
+  - [ ] Test fetch events from single calendar
+  - [ ] Test fetch events from multiple calendars
+  - [ ] Test recurring event parsing
+  - [ ] Test all-day event handling
+  - [ ] Test multi-day event handling
+  - [ ] Test event normalization
+  - [ ] Test API error handling (rate limits, network errors)
+
+- [ ] **Unit Tests** - Create `src/main/database/__tests__/db.test.ts`
+  - [ ] Test database initialization
+  - [ ] Test schema creation
+  - [ ] Test migrations run successfully
+  - [ ] Test database connection handling
+  - [ ] Test concurrent access
+  - [ ] Test database cleanup
+
+- [ ] **Unit Tests** - Create `src/main/repositories/__tests__/CalendarRepository.test.ts`
+  - [ ] Test create calendar
+  - [ ] Test read calendar by ID
+  - [ ] Test read all calendars
+  - [ ] Test update calendar
+  - [ ] Test delete calendar
+  - [ ] Test enable/disable calendar
+  - [ ] Test get enabled calendars only
+
+- [ ] **Unit Tests** - Create `src/main/repositories/__tests__/EventRepository.test.ts`
+  - [ ] Test create event
+  - [ ] Test read event by ID
+  - [ ] Test read events by calendar
+  - [ ] Test read events by date range
+  - [ ] Test read today's events
+  - [ ] Test read tomorrow's events
+  - [ ] Test update event
+  - [ ] Test delete event
+  - [ ] Test bulk insert events
+  - [ ] Test remove deleted events
+
+- [ ] **Unit Tests** - Create `src/main/services/google/__tests__/CalendarSyncService.test.ts`
+  - [ ] Test initial sync
+  - [ ] Test periodic sync scheduling
+  - [ ] Test manual sync trigger
+  - [ ] Test sync error handling
+  - [ ] Test database update on sync
+  - [ ] Test event deletion detection
+  - [ ] Test delta sync (incremental)
+  - [ ] Test sync state persistence
+
+- [ ] **Integration Tests** - Create `test/integration/calendar-sync.spec.ts`
+  - [ ] Test complete calendar sync flow (mocked Google API)
+  - [ ] Test events stored in database
+  - [ ] Test periodic sync updates events
+  - [ ] Test manual refresh updates events
+  - [ ] Test sync with network errors
+  - [ ] Test sync recovers after errors
+
+- [ ] **Coverage Verification**
+  - [ ] Run coverage report: `npm run test:coverage`
+  - [ ] Verify CalendarService has >70% coverage
+  - [ ] Verify CalendarRepository has >70% coverage
+  - [ ] Verify EventRepository has >70% coverage
+  - [ ] Verify CalendarSyncService has >70% coverage
+
+---
+
+## Phase 4: Calendar UI (Week 7-8)
+
+### React Setup
+- [ ] Create React application structure
+  - [ ] Create `src/renderer/App.tsx` (main React component)
+  - [ ] Create `src/renderer/index.tsx` (React entry point)
+  - [ ] Set up React Router for navigation
+  - [ ] Create base layout component
+  - [ ] Set up theme provider (pink/rose gold theme)
+
+### Calendar Landing Page
+- [ ] Create calendar page component
+  - [ ] Create `src/renderer/pages/CalendarPage.tsx`
+  - [ ] Display today's date prominently
+  - [ ] Create main calendar view (today's events)
+  - [ ] Sort events by time (chronological order)
   - [ ] Color-code events by calendar source
-  - [ ] Add current day highlighting
-  - [ ] Implement month navigation (prev/next buttons)
-  - [ ] Add swipe gestures for month navigation
-  - [ ] Display event details on tap
-  - [ ] Optimize for touch (large tap targets, min 44x44px)
-  - [ ] **Unit Tests:**
-    - [ ] Test MonthView renders correct number of days
-    - [ ] Test DayCell component displays events
-    - [ ] Test overflow event handling
-    - [ ] Test current day highlighting
-    - [ ] Test month navigation logic
-    - [ ] Test event color coding
-  - [ ] **Integration Test (Playwright):**
-    - [ ] Test month view displays events correctly
-    - [ ] Test swipe gesture navigation
-    - [ ] Test tapping event opens details
-    - [ ] Test month navigation buttons work
+  - [ ] Display event time, title, location
 
-### Week View
-- [ ] Design and implement week calendar view
-  - [ ] Create WeekView component in src/renderer/components/calendar/WeekView/
-  - [ ] Create timeline-based week view
-  - [ ] Show all family members in columns
-  - [ ] Display events with time blocks
-  - [ ] Add horizontal scroll/swipe between weeks
-  - [ ] Show all-day events in dedicated section
-  - [ ] Add time markers (hourly grid)
-  - [ ] Implement event details modal on tap
-  - [ ] **Unit Tests:**
-    - [ ] Test WeekView renders 7 days
-    - [ ] Test time block calculations
-    - [ ] Test multi-user column layout
-    - [ ] Test all-day event section
-    - [ ] Test week navigation logic
-  - [ ] **Integration Test (Playwright):**
-    - [ ] Test week view displays correctly
-    - [ ] Test swipe between weeks
-    - [ ] Test event time blocks render accurately
+- [ ] Create tomorrow's schedule sidebar
+  - [ ] Create smaller calendar view component
+  - [ ] Display tomorrow's events
+  - [ ] Show event count for tomorrow
+  - [ ] Minimal event details (time + title)
 
-### Agenda/List View
-- [ ] Create agenda/list view
-  - [ ] Create AgendaView component in src/renderer/components/calendar/AgendaView/
-  - [ ] Display events chronologically
-  - [ ] Group by day with date headers
-  - [ ] Show upcoming events (next 7-30 days)
-  - [ ] Add search/filter functionality
-  - [ ] Implement infinite scroll or pagination
-  - [ ] **Unit Tests:**
-    - [ ] Test AgendaView event grouping
-    - [ ] Test date header rendering
-    - [ ] Test search/filter logic
-    - [ ] Test pagination logic
-  - [ ] **Integration Test (Playwright):**
-    - [ ] Test agenda view displays events
-    - [ ] Test search functionality
-    - [ ] Test scrolling loads more events
+### Calendar Navigation
+- [ ] Implement carousel navigation
+  - [ ] Add "Previous Day" button (large, touch-friendly)
+  - [ ] Add "Next Day" button (large, touch-friendly)
+  - [ ] Add "Today" button to jump back
+  - [ ] Implement swipe gestures (optional enhancement)
+  - [ ] Update events display when navigating
+  - [ ] Show date being viewed
 
-### View Switching
-- [ ] Add view mode switcher
-  - [ ] Create ViewSwitcher component
-  - [ ] Create toggle between month/week/agenda views
-  - [ ] Save user's preferred view to preferences
-  - [ ] Smooth transitions between views
-  - [ ] Touch-friendly view selector (large buttons)
-  - [ ] **Unit Tests:**
-    - [ ] Test ViewSwitcher component
-    - [ ] Test view preference persistence
-    - [ ] Test view transitions
-  - [ ] **Integration Test (Playwright):**
-    - [ ] Test switching between all three views
-    - [ ] Test preferred view loads on app start
+### Calendar Settings
+- [ ] Create calendar settings modal
+  - [ ] Add gear icon button to calendar page
+  - [ ] Create modal/dialog component
+  - [ ] List all available calendars
+  - [ ] Add toggle switches for each calendar (enable/disable)
+  - [ ] Add "Select All" / "Deselect All" buttons
+  - [ ] Save calendar preferences to database
+  - [ ] Refresh calendar view on save
 
-### Event Details & Interaction
-- [ ] Build event detail modal/panel
-  - [ ] Create EventDetail component in src/renderer/components/calendar/EventDetail/
-  - [ ] Display full event information
-  - [ ] Show event time, date, location, description
-  - [ ] Display calendar source and color
-  - [ ] Add "Open in Google Calendar" link (optional)
-  - [ ] Support for recurring event information
-  - [ ] **Unit Tests:**
-    - [ ] Test EventDetail renders all fields
-    - [ ] Test recurring event display
-    - [ ] Test external link generation
-  - [ ] **Integration Test (Playwright):**
-    - [ ] Test opening event details from calendar
-    - [ ] Test closing event details modal
+### Refresh Functionality
+- [ ] Add manual refresh button
+  - [ ] Add refresh icon button to calendar page
+  - [ ] Trigger manual calendar sync
+  - [ ] Show loading indicator during sync
+  - [ ] Display last sync time
+  - [ ] Show success/error toast notification
 
----
+### ✅ Phase 4 Testing Requirements
+- [ ] **Component Tests** - Create `src/renderer/__tests__/App.test.tsx`
+  - [ ] Test App component renders
+  - [ ] Test React Router setup
+  - [ ] Test theme provider initialized
+  - [ ] Test base layout renders
+  - [ ] Test navigation between pages
 
-## Phase 4: Task Management System
+- [ ] **Component Tests** - Create `src/renderer/pages/__tests__/CalendarPage.test.tsx`
+  - [ ] Test calendar page renders
+  - [ ] Test today's date displays correctly
+  - [ ] Test events list renders
+  - [ ] Test empty state (no events)
+  - [ ] Test event sorting (chronological)
+  - [ ] Test event color coding
+  - [ ] Test event details display (time, title, location)
 
-### Task Data Model & Storage
-- [ ] Design task database schema
-  - [ ] Create Task model in src/main/database/models/Task.ts
-  - [ ] Create TaskRepository in src/main/database/repositories/
-  - [ ] Task table (id, title, description, assigned_to, etc.)
-  - [ ] Recurrence rules (daily, weekly, custom cron-like)
-  - [ ] Task categories and tags
-  - [ ] Completion history tracking
-  - [ ] Create database migrations
-  - [ ] **Unit Tests:**
-    - [ ] Test TaskRepository CRUD operations
-    - [ ] Test recurrence rule parsing
-    - [ ] Test completion history queries
-  - [ ] **Integration Test (Playwright):**
-    - [ ] Test task persistence end-to-end
+- [ ] **Component Tests** - Create `src/renderer/components/__tests__/TomorrowSchedule.test.tsx`
+  - [ ] Test tomorrow's schedule sidebar renders
+  - [ ] Test tomorrow's events display
+  - [ ] Test event count display
+  - [ ] Test minimal event details shown
 
-### Task CRUD Operations
-- [ ] Implement task creation
-  - [ ] Create TaskService in src/main/services/tasks/
-  - [ ] Create TaskForm component in src/renderer/components/tasks/TaskForm/
-  - [ ] Create task form/modal (touch-optimized)
-  - [ ] Task title, description fields
-  - [ ] Assign to family member(s)
-  - [ ] Set recurrence pattern (UI picker)
-  - [ ] Set category/color
-  - [ ] Add optional due time
-  - [ ] Set age-appropriateness indicator
-  - [ ] **Unit Tests:**
-    - [ ] Test TaskService.createTask()
-    - [ ] Test TaskForm validation
-    - [ ] Test recurrence picker component
-  - [ ] **Integration Test (Playwright):**
-    - [ ] Test creating a new task through UI
+- [ ] **Component Tests** - Create `src/renderer/components/__tests__/CalendarNavigation.test.tsx`
+  - [ ] Test navigation buttons render
+  - [ ] Test "Previous Day" button click
+  - [ ] Test "Next Day" button click
+  - [ ] Test "Today" button click
+  - [ ] Test date display updates on navigation
+  - [ ] Test touch target size (>44px)
 
-- [ ] Implement task editing
-  - [ ] Create edit functionality in TaskService
-  - [ ] Edit existing task details
-  - [ ] Update recurrence patterns
-  - [ ] Reassign tasks
-  - [ ] **Unit Tests:**
-    - [ ] Test TaskService.updateTask()
-    - [ ] Test edit form pre-population
-  - [ ] **Integration Test (Playwright):**
-    - [ ] Test editing an existing task
+- [ ] **Component Tests** - Create `src/renderer/components/__tests__/CalendarSettings.test.tsx`
+  - [ ] Test settings modal renders
+  - [ ] Test gear icon button renders
+  - [ ] Test calendar list displays
+  - [ ] Test toggle switches work
+  - [ ] Test "Select All" button
+  - [ ] Test "Deselect All" button
+  - [ ] Test save button
+  - [ ] Test modal close
 
-- [ ] Implement task deletion
-  - [ ] Delete single task
-  - [ ] Delete recurring series
-  - [ ] Soft delete with recovery option
-  - [ ] **Unit Tests:**
-    - [ ] Test TaskService.deleteTask()
-    - [ ] Test soft delete logic
-  - [ ] **Integration Test (Playwright):**
-    - [ ] Test deleting a task with confirmation
+- [ ] **Component Tests** - Create `src/renderer/components/__tests__/RefreshButton.test.tsx`
+  - [ ] Test refresh button renders
+  - [ ] Test refresh icon displays
+  - [ ] Test click triggers sync
+  - [ ] Test loading indicator shows during sync
+  - [ ] Test last sync time displays
+  - [ ] Test success notification shows
+  - [ ] Test error notification shows
 
-### Task Display & Organization
-- [ ] Create task list/board view
-  - [ ] Create TaskList component in src/renderer/components/tasks/TaskList/
-  - [ ] Create TaskCard component
-  - [ ] Display tasks for current user/profile
-  - [ ] Group by category or due date
-  - [ ] Show completion status
-  - [ ] Filter by assigned person
-  - [ ] Sort options (due date, priority, category)
-  - [ ] Today's tasks highlight
-  - [ ] **Unit Tests:**
-    - [ ] Test TaskList rendering
-    - [ ] Test filtering logic
-    - [ ] Test sorting logic
-    - [ ] Test grouping logic
-  - [ ] **Integration Test (Playwright):**
-    - [ ] Test task list displays all tasks
-    - [ ] Test filtering and sorting work
+- [ ] **Integration Tests** - Create `test/integration/calendar-ui.spec.ts`
+  - [ ] Test calendar page loads with events
+  - [ ] Test tomorrow's schedule displays
+  - [ ] Test navigation between days
+  - [ ] Test calendar settings modal open/close
+  - [ ] Test enabling/disabling calendars
+  - [ ] Test manual refresh updates UI
+  - [ ] Test loading states during sync
+  - [ ] Test error states display correctly
 
-### Task Completion Tracking
-- [ ] Implement task completion system
-  - [ ] Add completion methods to TaskService
-  - [ ] Touch-friendly checkboxes/toggles
-  - [ ] Log completion time and user
-  - [ ] Handle recurring task instances
-  - [ ] Create next instance on completion
-  - [ ] Show progress bars for multi-step tasks
-  - [ ] Weekly/monthly completion statistics
-  - [ ] **Unit Tests:**
-    - [ ] Test TaskService.completeTask()
-    - [ ] Test recurring instance creation
-    - [ ] Test completion statistics calculation
-  - [ ] **Integration Test (Playwright):**
-    - [ ] Test completing a task through UI
-    - [ ] Test recurring task creates next instance
-
-### Task Notifications & Reminders
-- [ ] Build notification system
-  - [ ] Create NotificationService in src/main/services/notifications/
-  - [ ] Task due reminders (system notifications)
-  - [ ] Overdue task indicators
-  - [ ] Daily task summary notification
-  - [ ] In-app notification center component
-  - [ ] Notification preferences per user
-  - [ ] **Unit Tests:**
-    - [ ] Test NotificationService.scheduleReminder()
-    - [ ] Test notification trigger logic
-    - [ ] Test notification preferences
-  - [ ] **Integration Test (Playwright):**
-    - [ ] Test task reminder appears
-    - [ ] Test notification preferences save
+- [ ] **Coverage Verification**
+  - [ ] Run coverage report: `npm run test:coverage`
+  - [ ] Verify CalendarPage has >70% coverage
+  - [ ] Verify all calendar components have >70% coverage
+  - [ ] Verify React components render without errors
 
 ---
 
-## Phase 5: Visual Reward System
+## Phase 5: Chore Management System (Week 9-11)
 
-### Reward Infrastructure
-- [ ] Design reward data model
-  - [ ] Create Reward model in src/main/database/models/Reward.ts
-  - [ ] Create RewardRepository in src/main/database/repositories/
-  - [ ] Points/stars system schema
-  - [ ] Badges/achievements database
-  - [ ] User reward history
-  - [ ] Weekly/monthly goals tracking
-  - [ ] **Unit Tests:**
-    - [ ] Test RewardRepository operations
-    - [ ] Test point calculation logic
-    - [ ] Test achievement criteria checking
-  - [ ] **Integration Test (Playwright):**
-    - [ ] Test reward data persists correctly
+### Google Sheets Integration
+- [ ] Create Google Sheets service
+  - [ ] Create `src/main/services/google/SheetsService.ts`
+  - [ ] Implement Google Sheets API client
+  - [ ] Add method to list sheets in spreadsheet
+  - [ ] Add method to read sheet data
+  - [ ] Add method to write sheet data
+  - [ ] Add method to create new spreadsheet
+  - [ ] Add method to create new sheet in spreadsheet
 
-### Completion Animations
-- [ ] Create celebration animations
-  - [ ] Create RewardAnimation component in src/renderer/components/rewards/RewardAnimation/
-  - [ ] Create RewardService in src/main/services/rewards/
-  - [ ] Confetti/star burst animation on task completion
-  - [ ] Sound effects library (child-appropriate) in src/assets/sounds/
-  - [ ] Particle effects (CSS/Canvas/SVG)
-  - [ ] Randomized celebration variations
-  - [ ] +Points animation flying to user avatar
-  - [ ] Smooth, 60fps performance
-  - [ ] **Unit Tests:**
-    - [ ] Test animation component renders
-    - [ ] Test sound playback logic
-    - [ ] Test particle generation
-  - [ ] **Integration Test (Playwright):**
-    - [ ] Test animation plays on task completion
-    - [ ] Test animation performance (60fps)
+### Chore Sheet Management
+- [ ] Implement chore sheet initialization
+  - [ ] Check for spreadsheet named `pi-touch-calendar-chores` (or env variable)
+  - [ ] Create spreadsheet if it doesn't exist
+  - [ ] Create example sheet with sample chores (brush teeth, make bed, etc.)
+  - [ ] Set up sheet format: Column A = Chore Name, Columns B-H = Days (Sun-Sat)
+  - [ ] Add header row to example sheet
 
-### Points & Achievement System
-- [ ] Implement points accumulation
-  - [ ] Award points for task completion in RewardService
-  - [ ] Different point values by task difficulty
-  - [ ] Bonus points for streaks
-  - [ ] Weekly/monthly point goals
-  - [ ] Points leaderboard (family-friendly competition)
-  - [ ] **Unit Tests:**
-    - [ ] Test RewardService.awardPoints()
-    - [ ] Test streak calculation
-    - [ ] Test point multipliers
-    - [ ] Test leaderboard sorting
-  - [ ] **Integration Test (Playwright):**
-    - [ ] Test points awarded on task complete
-    - [ ] Test leaderboard updates
+- [ ] Implement chore sheet reading
+  - [ ] Parse chore sheet format
+  - [ ] Read all sheets (each sheet = one child)
+  - [ ] Extract child name from sheet name
+  - [ ] Parse chores for each day of week
+  - [ ] Handle empty cells (chore not scheduled for that day)
+  - [ ] Validate sheet format
 
-- [ ] Create badge/achievement system
-  - [ ] Create AchievementBadge component
-  - [ ] Design achievement criteria (streaks, totals, special tasks)
-  - [ ] Create badge artwork/icons in src/assets/icons/
-  - [ ] Achievement unlock animations
-  - [ ] Achievement gallery/collection view
-  - [ ] Share achievements (optional)
-  - [ ] **Unit Tests:**
-    - [ ] Test achievement unlock logic
-    - [ ] Test badge rendering
-    - [ ] Test achievement criteria
-  - [ ] **Integration Test (Playwright):**
-    - [ ] Test achievement unlocks
-    - [ ] Test achievement gallery displays
+### Chore Database Schema
+- [ ] Create chore database tables
+  - [ ] Add children table (id, name, sheet_name)
+  - [ ] Add chores table (id, child_id, title, day_of_week, date_pulled)
+  - [ ] Add chore_completions table (id, chore_id, completed_at, completed_by)
+  - [ ] Create indexes for performance
+  - [ ] Add migration for chore schema
 
-### Reward Dashboard
-- [ ] Build rewards visualization UI
-  - [ ] Create RewardDashboard page in src/renderer/pages/Rewards/
-  - [ ] Current points display
-  - [ ] Progress toward goals (visual progress bars)
-  - [ ] Recent achievements showcase
-  - [ ] Weekly summary view
-  - [ ] Monthly summary view
-  - [ ] Motivational messages and encouragement
-  - [ ] **Unit Tests:**
-    - [ ] Test RewardDashboard component
-    - [ ] Test progress bar calculations
-    - [ ] Test summary data aggregation
-  - [ ] **Integration Test (Playwright):**
-    - [ ] Test dashboard displays correct data
-    - [ ] Test weekly/monthly views switch
+### Daily Chore Sync (2:00 AM)
+- [ ] Implement scheduled chore pull
+  - [ ] Create `src/main/services/chores/ChoreScheduler.ts`
+  - [ ] Schedule daily task at 2:00 AM
+  - [ ] Fetch today's chores for all children from Google Sheet
+  - [ ] Store chores in SQLite database
+  - [ ] Key chores by title (as specified in requirements)
+  - [ ] Handle errors gracefully (log and retry)
+  - [ ] Send previous day's completion stats to Google Sheets
 
----
+### Chore Stats Tracking
+- [ ] Create stats sheet service
+  - [ ] Create `src/main/services/chores/ChoreStatsService.ts`
+  - [ ] Check for `pi-touch-calendar-chores-stats` spreadsheet
+  - [ ] Create stats spreadsheet if it doesn't exist
+  - [ ] Define stats format: date, child_name, chore_title, completed (yes/no), completed_at
+  - [ ] Implement batch insert of previous day's stats
+  - [ ] Add error handling for failed uploads
 
-## Phase 6: Touchscreen UI/UX Optimization
+### Chore Repository
+- [ ] Create chore data access layer
+  - [ ] Create `src/main/repositories/ChoreRepository.ts`
+  - [ ] Implement method to insert daily chores
+  - [ ] Implement method to get chores by child and date
+  - [ ] Implement method to mark chore as complete
+  - [ ] Implement method to get completion stats
+  - [ ] Implement method to get previous day's completions
 
-### Touch Interaction Standards
-- [ ] Ensure all touch targets meet minimum size (44x44px)
-- [ ] Implement visual feedback for all interactions
-  - [ ] Press/active states for buttons
-  - [ ] Ripple effects or highlights
-  - [ ] Haptic feedback (if supported)
+### ✅ Phase 5 Testing Requirements
+- [ ] **Unit Tests** - Create `src/main/services/google/__tests__/SheetsService.test.ts`
+  - [ ] Test Google Sheets API client initialization
+  - [ ] Test list sheets in spreadsheet
+  - [ ] Test read sheet data
+  - [ ] Test write sheet data
+  - [ ] Test create new spreadsheet
+  - [ ] Test create new sheet
+  - [ ] Test API error handling
+  - [ ] Test rate limit handling
 
-### Gesture Support
-- [ ] Add swipe gestures
-  - [ ] Swipe left/right for navigation (days, weeks, months)
-  - [ ] Pull-to-refresh for calendar sync
-  - [ ] Swipe to dismiss modals
-  - [ ] Pinch to zoom (optional, for calendar views)
+- [ ] **Unit Tests** - Create `src/main/services/chores/__tests__/ChoreSheetService.test.ts`
+  - [ ] Test spreadsheet existence check
+  - [ ] Test spreadsheet creation
+  - [ ] Test example sheet creation
+  - [ ] Test sheet format validation
+  - [ ] Test chore sheet parsing (Column A = title, B-H = days)
+  - [ ] Test reading all sheets
+  - [ ] Test extracting child name from sheet name
+  - [ ] Test handling empty cells
+  - [ ] Test invalid sheet format handling
 
-### Typography & Readability
-- [ ] Optimize fonts for readability
-  - [ ] Large, easy-to-read font sizes
-  - [ ] High contrast text
-  - [ ] Font size adjustment setting
-  - [ ] Support for different reading distances
+- [ ] **Unit Tests** - Create `src/main/services/chores/__tests__/ChoreScheduler.test.ts`
+  - [ ] Test scheduling task at 2:00 AM
+  - [ ] Test daily chore fetch trigger
+  - [ ] Test chore storage in database
+  - [ ] Test keying chores by title
+  - [ ] Test error handling and retry logic
+  - [ ] Test stats upload trigger
+  - [ ] Test scheduler state persistence
 
-### Responsive Layout
-- [ ] Support various screen sizes
-  - [ ] Landscape orientation (primary)
-  - [ ] Portrait orientation support
-  - [ ] Responsive grid system
-  - [ ] Adapt to 1920x1200 and other common resolutions
-  - [ ] Test on actual Raspberry Pi touchscreen
+- [ ] **Unit Tests** - Create `src/main/services/chores/__tests__/ChoreStatsService.test.ts`
+  - [ ] Test stats spreadsheet existence check
+  - [ ] Test stats spreadsheet creation
+  - [ ] Test stats format validation
+  - [ ] Test batch insert of completion data
+  - [ ] Test stats row format (date, child, chore, completed, time)
+  - [ ] Test error handling for failed uploads
+  - [ ] Test duplicate prevention
 
-### Visual Design System
-- [ ] Create consistent design system
-  - [ ] Color palette (family-friendly, high contrast)
-  - [ ] Button styles and variants
-  - [ ] Card/panel components
-  - [ ] Modal/dialog styles
-  - [ ] Icon library
-  - [ ] Loading states and skeletons
-  - [ ] Empty states
-  - [ ] Color-blind friendly palettes option
+- [ ] **Unit Tests** - Create `src/main/repositories/__tests__/ChoreRepository.test.ts`
+  - [ ] Test insert daily chores
+  - [ ] Test get chores by child and date
+  - [ ] Test get chores for today
+  - [ ] Test mark chore as complete
+  - [ ] Test mark chore as incomplete
+  - [ ] Test get completion stats
+  - [ ] Test get previous day's completions
+  - [ ] Test chore keying by title
 
----
+- [ ] **Unit Tests** - Create `src/main/repositories/__tests__/ChildRepository.test.ts`
+  - [ ] Test create child
+  - [ ] Test read all children
+  - [ ] Test read child by ID
+  - [ ] Test update child
+  - [ ] Test delete child
 
-## Phase 7: Kiosk Mode & Raspberry Pi Deployment
+- [ ] **Integration Tests** - Create `test/integration/chore-sync.spec.ts`
+  - [ ] Test chore sheet creation (mocked Google Sheets API)
+  - [ ] Test daily chore pull at 2:00 AM (mocked time)
+  - [ ] Test chores stored in database
+  - [ ] Test stats upload to Google Sheets
+  - [ ] Test end-to-end chore lifecycle (pull → complete → upload stats)
+  - [ ] Test error recovery in sync process
 
-### Kiosk Configuration
-- [ ] Configure Electron for kiosk mode
-  - [ ] Fullscreen borderless window
-  - [ ] Disable system shortcuts (Alt+Tab, etc.)
-  - [ ] Prevent accidental app exit
-  - [ ] Hide cursor after inactivity (optional)
-  - [ ] Disable right-click context menu
-  - [ ] Disable text selection (optional)
-
-### Admin Access
-- [ ] Implement hidden admin access
-  - [ ] Secret gesture/tap sequence to unlock settings
-  - [ ] Admin password prompt
-  - [ ] Settings/configuration panel
-  - [ ] App exit option (admin only)
-  - [ ] Debug mode toggle
-
-### Auto-start & System Integration
-- [ ] Set up auto-start on boot
-  - [ ] Create systemd service file
-  - [ ] Configure autostart for Raspberry Pi OS
-  - [ ] Handle graceful restarts
-  - [ ] Auto-recovery from crashes
-
-### Screen Management
-- [ ] Implement screen wake/sleep
-  - [ ] Scheduled screen sleep times
-  - [ ] Wake on touch
-  - [ ] Screensaver mode (show clock and next event)
-  - [ ] Energy saving settings
-  - [ ] Brightness control
-
-### Build & Packaging
-- [ ] Configure ARM builds
-  - [ ] Cross-compilation setup in Nix flake
-  - [ ] ARM64 Electron build
-  - [ ] Test on actual Raspberry Pi hardware
-
-- [ ] Create .deb package
-  - [ ] Configure electron-forge for .deb output
-  - [ ] Include systemd service in package
-  - [ ] Post-install scripts for setup
-  - [ ] Desktop entry file
-  - [ ] Icon assets
-
-### Update Mechanism
-- [ ] Implement app update system
-  - [ ] Check for updates on startup (optional)
-  - [ ] Download and install updates
-  - [ ] Update notification in admin panel
-  - [ ] Rollback on failed update
-  - [ ] Version display in settings
+- [ ] **Coverage Verification**
+  - [ ] Run coverage report: `npm run test:coverage`
+  - [ ] Verify SheetsService has >70% coverage
+  - [ ] Verify ChoreSheetService has >70% coverage
+  - [ ] Verify ChoreScheduler has >70% coverage
+  - [ ] Verify ChoreStatsService has >70% coverage
+  - [ ] Verify ChoreRepository has >70% coverage
 
 ---
 
-## Phase 8: Settings & Preferences
+## Phase 6: Chore UI (Week 12-13)
 
-### Application Settings UI
-- [ ] Create settings panel (admin-protected)
-  - [ ] General settings tab
-  - [ ] Calendar sync settings
-  - [ ] Display preferences
-  - [ ] User/profile management
-  - [ ] Task settings
-  - [ ] Reward settings
-  - [ ] About/version info
+### Chore Page Component
+- [ ] Create chore page
+  - [ ] Create `src/renderer/pages/ChorePage.tsx`
+  - [ ] Add navigation button from calendar to chore page
+  - [ ] Add navigation button from chore page back to calendar
+  - [ ] Implement child selector (large buttons with names)
+  - [ ] Display selected child's name prominently
 
-### Configurable Options
-- [ ] Calendar sync interval setting
-- [ ] Default calendar view preference
-- [ ] Theme/color scheme options
-- [ ] Notification preferences
-- [ ] Time format (12h/24h)
-- [ ] Week start day (Sunday/Monday)
-- [ ] Language/locale settings (future)
-- [ ] Screen timeout settings
-- [ ] Task completion sound on/off
+### Chore List Display
+- [ ] Create chore list component
+  - [ ] Create `src/renderer/components/ChoreList.tsx`
+  - [ ] Display all chores for selected child
+  - [ ] Show chore title
+  - [ ] Show completion status (checkbox or toggle)
+  - [ ] Use large touch-friendly checkboxes
+  - [ ] Group completed and incomplete chores
+  - [ ] Show completion timestamp for completed chores
 
-### Data Management
-- [ ] Backup/restore functionality
-  - [ ] Export database to file
-  - [ ] Import database from backup
-  - [ ] Automatic backups (daily/weekly)
-  - [ ] Backup to external location
+### Chore Completion
+- [ ] Implement chore completion UI
+  - [ ] Add tap handler for chore completion toggle
+  - [ ] Call IPC to mark chore complete/incomplete
+  - [ ] Update UI immediately (optimistic update)
+  - [ ] Show success animation or feedback
+  - [ ] Store completion timestamp
+  - [ ] Handle errors gracefully
 
-- [ ] Data export options
-  - [ ] Export tasks to CSV/JSON
-  - [ ] Export completed tasks history
-  - [ ] Export reward history
+### Multi-Child View
+- [ ] Create child switcher
+  - [ ] Create child selection component (large avatars or buttons)
+  - [ ] Allow switching between children
+  - [ ] Persist selected child (session storage)
+  - [ ] Show chore counts per child (optional)
 
----
+### ✅ Phase 6 Testing Requirements
+- [ ] **Component Tests** - Create `src/renderer/pages/__tests__/ChorePage.test.tsx`
+  - [ ] Test chore page renders
+  - [ ] Test navigation from calendar page works
+  - [ ] Test navigation back to calendar works
+  - [ ] Test child selector displays
+  - [ ] Test selected child name displays
+  - [ ] Test child switcher works
 
-## Phase 9: Accessibility & Localization
+- [ ] **Component Tests** - Create `src/renderer/components/__tests__/ChoreList.test.tsx`
+  - [ ] Test chore list renders
+  - [ ] Test chores display for selected child
+  - [ ] Test chore title displays
+  - [ ] Test completion status displays
+  - [ ] Test completed vs incomplete grouping
+  - [ ] Test completion timestamp displays
+  - [ ] Test empty state (no chores)
+  - [ ] Test touch-friendly checkboxes (>44px)
 
-### Accessibility Features
-- [ ] Keyboard navigation support
-  - [ ] Tab order for all interactive elements
-  - [ ] Keyboard shortcuts (documented)
-  - [ ] Focus indicators
+- [ ] **Component Tests** - Create `src/renderer/components/__tests__/ChoreItem.test.tsx`
+  - [ ] Test chore item renders
+  - [ ] Test checkbox click handler
+  - [ ] Test completion toggle
+  - [ ] Test optimistic UI update
+  - [ ] Test success animation/feedback
+  - [ ] Test error handling
 
-- [ ] Screen reader support
-  - [ ] ARIA labels on all interactive elements
-  - [ ] Semantic HTML
-  - [ ] Announce dynamic content changes
+- [ ] **Component Tests** - Create `src/renderer/components/__tests__/ChildSwitcher.test.tsx`
+  - [ ] Test child switcher renders
+  - [ ] Test all children display
+  - [ ] Test child selection works
+  - [ ] Test selected child highlighting
+  - [ ] Test session persistence
+  - [ ] Test chore counts display (if implemented)
+  - [ ] Test large touch targets (>44px)
 
-- [ ] High contrast mode
-  - [ ] Toggle for high contrast theme
-  - [ ] Increased border visibility
-  - [ ] Enhanced focus indicators
+- [ ] **Integration Tests** - Create `test/integration/chore-ui.spec.ts`
+  - [ ] Test navigation to chore page
+  - [ ] Test child selection
+  - [ ] Test chore list loads for child
+  - [ ] Test marking chore as complete
+  - [ ] Test marking chore as incomplete
+  - [ ] Test switching between children
+  - [ ] Test chore completion persists
+  - [ ] Test error states display correctly
 
-- [ ] Additional accessibility options
-  - [ ] Reduce motion option (disable animations)
-  - [ ] Font size controls
-  - [ ] Color blind friendly mode
-
-### Internationalization (Future)
-- [ ] i18n framework setup
-- [ ] English locale (default)
-- [ ] Date/time formatting localization
-- [ ] Number formatting localization
-- [ ] Extract hardcoded strings to translation files
-- [ ] RTL support preparation
-
----
-
-## Phase 10: Testing & Quality Assurance
-
-**Note:** Unit tests and integration tests are now embedded in each phase above. This phase focuses on overall test coverage, performance testing, and manual testing.
-
-### Test Coverage & Quality
-- [ ] Review overall test coverage across all modules
-- [ ] Ensure minimum 70% code coverage
-- [ ] Review and improve test quality
-- [ ] Add missing unit tests for edge cases
-- [ ] Add missing integration tests for user flows
-- [ ] Set up coverage reporting in CI/CD
-- [ ] Create coverage badges for README
-
-### Performance Testing
-- [ ] Create performance test suite
-  - [ ] Measure startup time on Raspberry Pi
-  - [ ] Profile memory usage during normal operation
-  - [ ] Test animation performance (60fps target)
-  - [ ] Test with large datasets (100+ events, 50+ tasks)
-  - [ ] Measure IPC communication overhead
-  - [ ] Test database query performance
-- [ ] Optimize based on findings
-  - [ ] Optimize bundle size
-  - [ ] Lazy load non-critical components
-  - [ ] Optimize database indices
-  - [ ] Reduce unnecessary re-renders
-- [ ] Create performance benchmarks
-  - [ ] Document baseline performance metrics
-  - [ ] Set up performance regression testing
-
-### Manual Testing
-- [ ] Hardware testing
-  - [ ] Test on actual Raspberry Pi hardware
-  - [ ] Test with official Raspberry Pi touchscreen
-  - [ ] Test with alternative touchscreens
-  - [ ] Test different screen resolutions
-- [ ] Interaction testing
-  - [ ] Test all touch gestures (swipe, tap, long-press)
-  - [ ] Test touch target sizes (minimum 44x44px)
-  - [ ] Test multi-touch if applicable
-  - [ ] Test on-screen keyboard interaction
-- [ ] Kiosk mode testing
-  - [ ] Test fullscreen mode stability
-  - [ ] Test prevention of system shortcuts
-  - [ ] Test auto-start on boot
-  - [ ] Test recovery from crashes
-- [ ] Endurance testing
-  - [ ] Extended runtime testing (24+ hours)
-  - [ ] Multi-day usage testing
-  - [ ] Memory leak detection
-  - [ ] Database integrity over time
-- [ ] User acceptance testing
-  - [ ] Family usability testing
-  - [ ] Child interaction testing (ages 5-12)
-  - [ ] Accessibility testing
-  - [ ] Collect feedback and iterate
+- [ ] **Coverage Verification**
+  - [ ] Run coverage report: `npm run test:coverage`
+  - [ ] Verify ChorePage has >70% coverage
+  - [ ] Verify ChoreList has >70% coverage
+  - [ ] Verify ChoreItem has >70% coverage
+  - [ ] Verify ChildSwitcher has >70% coverage
 
 ---
 
-## Phase 11: Documentation
+## Phase 7: UI/UX Polish (Week 14-15)
 
-### Code Documentation
-- [ ] Add JSDoc comments to all public functions
-- [ ] Document IPC API contracts
-- [ ] Document database schema
-- [ ] Document component props and interfaces
-- [ ] Add inline comments for complex logic
+### Theme & Styling
+- [ ] Implement pink/rose gold theme
+  - [ ] Create CSS variables for theme colors
+  - [ ] Create `src/renderer/styles/theme.css`
+  - [ ] Apply primary color: pink/rose gold
+  - [ ] Choose complementary accent colors
+  - [ ] Ensure high contrast for readability
+  - [ ] Test color palette on actual display
+
+### Touch Optimization
+- [ ] Optimize all touch targets
+  - [ ] Ensure all buttons minimum 44x44px
+  - [ ] Increase padding around interactive elements
+  - [ ] Add visual press states (hover/active)
+  - [ ] Test all interactions on touch screen
+  - [ ] Add touch ripple effects (optional)
+
+### Button-Based Navigation
+- [ ] Implement large navigation buttons
+  - [ ] Create navigation bar component
+  - [ ] Add large "Calendar" button
+  - [ ] Add large "Chores" button
+  - [ ] Add Settings/Gear button (smaller, in corner)
+  - [ ] Ensure buttons are always visible
+  - [ ] Use icons + text for clarity
+
+### Remove Text Input
+- [ ] Ensure no open text fields
+  - [ ] Remove any text input boxes from UI
+  - [ ] Replace with button-based selections
+  - [ ] Use pickers/dropdowns where needed
+  - [ ] Configuration via Google Sheets only (as per requirements)
+
+### Visual Feedback
+- [ ] Add loading indicators
+  - [ ] Create loading spinner component
+  - [ ] Show during calendar sync
+  - [ ] Show during chore loading
+  - [ ] Show during Google Sheets operations
+
+- [ ] Add success/error notifications
+  - [ ] Create toast notification component
+  - [ ] Show success messages for actions
+  - [ ] Show error messages gracefully
+  - [ ] Auto-dismiss after timeout
+
+### ✅ Phase 7 Testing Requirements
+- [ ] **Unit Tests** - Create `src/renderer/styles/__tests__/theme.test.ts`
+  - [ ] Test theme variables are defined
+  - [ ] Test primary color is pink/rose gold
+  - [ ] Test accent colors are complementary
+  - [ ] Test contrast ratios meet accessibility standards
+  - [ ] Test color values are valid CSS
+
+- [ ] **Component Tests** - Create `src/renderer/components/__tests__/Button.test.tsx`
+  - [ ] Test button renders
+  - [ ] Test button text displays
+  - [ ] Test button click handler
+  - [ ] Test button size meets minimum (44x44px)
+  - [ ] Test button press/active states
+  - [ ] Test button disabled state
+  - [ ] Test button variants (primary, secondary, etc.)
+
+- [ ] **Component Tests** - Create `src/renderer/components/__tests__/NavigationBar.test.tsx`
+  - [ ] Test navigation bar renders
+  - [ ] Test all navigation buttons display
+  - [ ] Test navigation button sizes (large, touch-friendly)
+  - [ ] Test navigation button clicks
+  - [ ] Test active page highlighting
+  - [ ] Test icons + text display
+
+- [ ] **Component Tests** - Create `src/renderer/components/__tests__/LoadingSpinner.test.tsx`
+  - [ ] Test spinner renders
+  - [ ] Test spinner animation
+  - [ ] Test spinner size variations
+  - [ ] Test spinner with message
+
+- [ ] **Component Tests** - Create `src/renderer/components/__tests__/Toast.test.tsx`
+  - [ ] Test toast renders
+  - [ ] Test success toast variant
+  - [ ] Test error toast variant
+  - [ ] Test info toast variant
+  - [ ] Test toast auto-dismiss
+  - [ ] Test toast manual dismiss
+  - [ ] Test multiple toasts queue
+
+- [ ] **Visual Regression Tests** (Optional)
+  - [ ] Create Playwright visual tests for theme consistency
+  - [ ] Test touch target sizes across all components
+  - [ ] Test color contrast on actual display
+  - [ ] Test button press states are visible
+
+- [ ] **Integration Tests** - Create `test/integration/ui-polish.spec.ts`
+  - [ ] Test theme applied across all pages
+  - [ ] Test navigation between pages works
+  - [ ] Test loading states appear during operations
+  - [ ] Test success notifications appear after actions
+  - [ ] Test error notifications appear on failures
+  - [ ] Test all interactive elements are touchable (>44px)
+
+- [ ] **Coverage Verification**
+  - [ ] Run coverage report: `npm run test:coverage`
+  - [ ] Verify all UI components have >70% coverage
+  - [ ] Verify theme utilities have test coverage
+
+---
+
+## Phase 8: Kiosk Mode & Deployment (Week 16-17)
+
+### Kiosk Mode Configuration
+- [ ] Configure fullscreen mode
+  - [ ] Update `src/main/window-manager.ts` to create fullscreen window
+  - [ ] Remove window decorations (frameless)
+  - [ ] Disable menu bar
+  - [ ] Prevent window resizing
+  - [ ] Test on Raspberry Pi
+
+### System Integration
+- [ ] Create systemd service
+  - [ ] Create `pi-touch-calendar.service` file
+  - [ ] Configure auto-start on boot
+  - [ ] Set restart policy (always restart)
+  - [ ] Configure environment variables
+  - [ ] Test service installation
+
+### Environment Variables
+- [ ] Document environment variables
+  - [ ] Add `PI_CHORE_SHEET_NAME` (default: pi-touch-calendar-chores)
+  - [ ] Add `PI_CHORE_RESULTS_SHEET_NAME` (default: pi-touch-calendar-chores-stats)
+  - [ ] Create `.env.example` file
+  - [ ] Update README with environment setup
+
+### Raspberry Pi Packaging
+- [ ] Create ARM build configuration
+  - [ ] Update build scripts for ARM64
+  - [ ] Test build on Raspberry Pi
+  - [ ] Create installer script
+  - [ ] Package application with dependencies
+  - [ ] Create installation instructions
+
+### ✅ Phase 8 Testing Requirements
+- [ ] **Unit Tests** - Create `src/main/config/__tests__/KioskConfig.test.ts`
+  - [ ] Test kiosk mode settings
+  - [ ] Test fullscreen configuration
+  - [ ] Test window decoration settings
+  - [ ] Test menu bar visibility
+  - [ ] Test shortcut prevention settings
+
+- [ ] **Unit Tests** - Create `src/main/utils/__tests__/environment.test.ts`
+  - [ ] Test environment variable reading
+  - [ ] Test PI_CHORE_SHEET_NAME default value
+  - [ ] Test PI_CHORE_RESULTS_SHEET_NAME default value
+  - [ ] Test environment variable overrides
+
+- [ ] **Integration Tests** - Create `test/integration/kiosk-mode.spec.ts`
+  - [ ] Test app launches in fullscreen mode
+  - [ ] Test window is borderless
+  - [ ] Test menu bar is hidden
+  - [ ] Test system shortcuts are disabled
+  - [ ] Test app cannot be closed accidentally
+  - [ ] Test right-click context menu is disabled
+
+- [ ] **System Integration Tests** (Manual on Raspberry Pi)
+  - [ ] Test systemd service starts on boot
+  - [ ] Test app auto-starts after reboot
+  - [ ] Test app restarts after crash
+  - [ ] Test environment variables load correctly
+  - [ ] Test app runs without user login
+
+- [ ] **Build Tests**
+  - [ ] Test ARM64 build completes successfully
+  - [ ] Test build output size is reasonable
+  - [ ] Test all dependencies are included
+  - [ ] Test installer script works
+  - [ ] Test app runs on Raspberry Pi OS
+
+- [ ] **Coverage Verification**
+  - [ ] Run coverage report: `npm run test:coverage`
+  - [ ] Verify KioskConfig has >70% coverage
+  - [ ] Verify environment utilities have test coverage
+
+---
+
+## Phase 9: Documentation & Testing (Week 18)
 
 ### User Documentation
-- [ ] Create user guide
-- [ ] Setup/installation instructions
-- [ ] How to add Google Calendar accounts
-- [ ] How to create and manage tasks
-- [ ] How the reward system works
-- [ ] Admin settings guide
-- [ ] Troubleshooting guide
+- [ ] Create setup guide
+  - [ ] Document Google Cloud project setup
+  - [ ] Document OAuth credential creation
+  - [ ] Document enabling Google APIs (Calendar, Sheets, Drive)
+  - [ ] Add screenshots for each step
+  - [ ] Include troubleshooting section
 
-### Developer Documentation
-- [ ] Update README with development setup
-- [ ] Document build process
-- [ ] Document deployment to Raspberry Pi
-- [ ] Architecture overview document
-- [ ] Contributing guidelines
-- [ ] API documentation
+### README Updates
+- [ ] Update README.md
+  - [ ] Add project overview
+  - [ ] Add feature list
+  - [ ] Add installation instructions
+  - [ ] Add Raspberry Pi setup instructions
+  - [ ] Add Google OAuth setup instructions
+  - [ ] Add configuration documentation
+  - [ ] Add screenshots of UI
+
+### Testing
+- [ ] Create integration tests
+  - [ ] Test pincode authentication flow
+  - [ ] Test Google OAuth flow (mocked)
+  - [ ] Test calendar sync
+  - [ ] Test chore loading and completion
+  - [ ] Test navigation between pages
+  - [ ] Test on actual Raspberry Pi hardware
+
+### Manual Testing
+- [ ] Test complete user flow
+  - [ ] First-time setup (pincode creation)
+  - [ ] Google OAuth authentication (QR code)
+  - [ ] Calendar display and refresh
+  - [ ] Calendar settings (enable/disable calendars)
+  - [ ] Chore page navigation
+  - [ ] Chore completion
+  - [ ] Daily chore sync (scheduled task)
+  - [ ] Stats upload to Google Sheets
+
+### ✅ Phase 9 Testing Requirements
+- [ ] **End-to-End Tests** - Create `test/e2e/complete-workflow.spec.ts`
+  - [ ] Test complete first-time setup workflow
+  - [ ] Test pincode creation and login
+  - [ ] Test Google OAuth flow (QR code scan)
+  - [ ] Test calendar page loads after authentication
+  - [ ] Test navigate to chore page
+  - [ ] Test complete a chore
+  - [ ] Test navigate back to calendar
+  - [ ] Test logout and re-login
+
+- [ ] **End-to-End Tests** - Create `test/e2e/daily-workflow.spec.ts`
+  - [ ] Test app startup (skip pincode with valid token)
+  - [ ] Test calendar displays today's events
+  - [ ] Test tomorrow's schedule displays
+  - [ ] Test navigate to next day
+  - [ ] Test navigate back to today
+  - [ ] Test open calendar settings
+  - [ ] Test disable a calendar
+  - [ ] Test save and see updated events
+  - [ ] Test manual refresh
+
+- [ ] **End-to-End Tests** - Create `test/e2e/chore-workflow.spec.ts`
+  - [ ] Test navigate to chore page
+  - [ ] Test select a child
+  - [ ] Test view child's chores
+  - [ ] Test mark chore as complete
+  - [ ] Test mark chore as incomplete
+  - [ ] Test switch to another child
+  - [ ] Test stats are uploaded (mocked time)
+
+- [ ] **Accessibility Tests**
+  - [ ] Test keyboard navigation works
+  - [ ] Test tab order is logical
+  - [ ] Test focus indicators are visible
+  - [ ] Test screen reader labels (ARIA)
+  - [ ] Test color contrast meets WCAG AA standards
+
+- [ ] **Performance Tests**
+  - [ ] Test app startup time (<3 seconds)
+  - [ ] Test calendar sync performance
+  - [ ] Test UI responsiveness (60fps)
+  - [ ] Test memory usage (< 200MB)
+  - [ ] Test database query performance
+
+- [ ] **Cross-Device Tests** (Manual)
+  - [ ] Test on Raspberry Pi 4
+  - [ ] Test on Raspberry Pi 5
+  - [ ] Test with official touchscreen
+  - [ ] Test with third-party touchscreen
+  - [ ] Test at different screen resolutions
+
+- [ ] **Final Coverage Report**
+  - [ ] Run full test suite: `npm run test`
+  - [ ] Generate coverage report: `npm run test:coverage`
+  - [ ] Verify overall coverage >70%
+  - [ ] Document any uncovered edge cases
+  - [ ] Create coverage badge for README
 
 ---
 
-## Phase 12: Polish & Enhancements
+## Future Enhancements (Post-MVP)
+
+### Advanced Calendar Features
+- [ ] Week view
+- [ ] Month view
+- [ ] Event details modal
+- [ ] Multi-account support (multiple Google accounts)
+
+### Advanced Chore Features
+- [ ] Chore rewards system
+- [ ] Chore streaks tracking
+- [ ] Custom chore creation via UI (requires text input - conflicts with requirements)
+- [ ] Chore templates
+
+### Additional Features
+- [ ] Dark mode / theme options
+- [ ] Weather widget
+- [ ] Birthday reminders
+- [ ] Family photos slideshow mode
+- [ ] Voice announcements
 
 ### Performance Optimizations
-- [ ] Code splitting and lazy loading
-- [ ] Image optimization (WebP format)
-- [ ] Database query optimization
-- [ ] Caching strategies
-- [ ] Reduce initial bundle size
-- [ ] Optimize re-renders in React components
-
-### Visual Polish
-- [ ] Smooth page transitions
-- [ ] Loading states for all async operations
-- [ ] Empty states with helpful messages
-- [ ] Micro-interactions and animations
-- [ ] Consistent spacing and alignment
-- [ ] Professional iconography
-
-### Additional Features (Nice to Have)
-- [ ] Weather widget integration
-- [ ] School calendar import (iCal format)
-- [ ] Family message board/notes
-- [ ] Photo slideshow mode
-- [ ] Birthday/anniversary reminders
-- [ ] Shopping list integration
-- [ ] Meal planning integration
-- [ ] Allowance tracking tied to tasks
-
-### Security Hardening
-- [ ] Security audit of IPC handlers
-- [ ] Content Security Policy headers
-- [ ] SQL injection prevention
-- [ ] XSS prevention
-- [ ] Secure token storage audit
-- [ ] Rate limiting for login attempts
-- [ ] Session management and expiration
+- [ ] Optimize calendar sync (delta sync)
+- [ ] Reduce memory footprint
+- [ ] Optimize database queries
+- [ ] Lazy load UI components
 
 ---
 
-## Phase 13: Deployment & Maintenance
+## Notes & Considerations
 
-### Initial Deployment
-- [ ] Build final .deb package
-- [ ] Create installation script
-- [ ] Set up Raspberry Pi OS
-- [ ] Install and configure app
-- [ ] Mount display/hardware setup
-- [ ] Initial family onboarding
+### Technical Decisions Needed
+1. **SQLite ORM**: Choose between better-sqlite3 (raw SQL) or Prisma (type-safe ORM)
+2. **React State Management**: Choose between Context API, Redux Toolkit, or Zustand
+3. **Date Library**: Use date-fns or Day.js for date manipulation
+4. **Encryption**: Choose encryption library for OAuth token storage (node-forge, crypto-js)
 
-### Monitoring & Logging
-- [ ] Set up error reporting (Sentry or similar)
-- [ ] Usage analytics (privacy-respecting)
-- [ ] Performance monitoring
-- [ ] Log aggregation for debugging
+### Alignment with REQUIREMENTS.md
+- ✅ Pincode authentication (no username)
+- ✅ Config stored in ~/.config/pi-touch-calendar/
+- ✅ Google OAuth with QR code
+- ✅ Authentication logging with 90-day retention
+- ✅ Calendar page as landing (if authenticated)
+- ✅ Tomorrow's schedule sidebar
+- ✅ Carousel navigation for calendar
+- ✅ Gear icon for calendar settings
+- ✅ Chore page with Google Sheets integration
+- ✅ Daily chore pull at 2:00 AM
+- ✅ SQLite for chore tracking
+- ✅ Stats pushed to separate Google Sheet
+- ✅ Touch-first UI with large buttons
+- ✅ Pink/rose gold theme
+- ✅ No text input (configuration via Google Sheets)
+- ✅ Environment variables for sheet names
 
-### Maintenance Plan
-- [ ] Monthly update schedule
-- [ ] Bug tracking system
-- [ ] Feature request process
-- [ ] Backup verification
-- [ ] Database maintenance tasks
+### Key Risks & Mitigations
+1. **Risk**: Google OAuth on localhost may not work on mobile
+   - **Mitigation**: Use local network IP, ensure both devices on same network
+2. **Risk**: Scheduled task at 2:00 AM may fail silently
+   - **Mitigation**: Add logging, error notifications, manual trigger option
+3. **Risk**: Google Sheets API rate limits
+   - **Mitigation**: Implement exponential backoff, batch operations
+4. **Risk**: SQLite database corruption
+   - **Mitigation**: Regular backups, write-ahead logging (WAL mode)
 
----
+### Current State vs Requirements
+**Implemented (15%)**:
+- Electron + TypeScript + Vite build system
+- Window management
+- IPC communication infrastructure
+- Placeholder authentication (wrong type - username/password)
 
-## Current Priorities (Next Steps)
-
-**IMMEDIATE PRIORITY - Phase 0 (Application Restructure):**
-
-Before implementing new features, restructure the application to follow proper architecture patterns:
-
-1. **Set up testing infrastructure** (Vitest + Playwright)
-   - Install testing frameworks
-   - Configure test runners
-   - Create test utilities and helpers
-   - Write example tests
-
-2. **Reorganize file structure**
-   - Create new directory structure (see Phase 0)
-   - Migrate existing code to new locations
-   - Update import paths and configurations
-   - Verify app still builds and runs
-
-3. **Create TESTING.md documentation**
-   - Document testing standards
-   - Provide unit test examples
-   - Provide integration test examples
-   - Define coverage targets
-
-**AFTER Phase 0 completion, proceed with feature development:**
-
-Based on the AI_DEVELOPMENT_PROMPT.md "Next Priority Features":
-
-1. **Core Infrastructure** (Phase 1)
-   - Database setup with SQLite
-   - User authentication and profile system
-   - State management setup
-   - Logging infrastructure
-
-2. **Google Calendar Integration** (Phase 2)
-   - OAuth flow implementation
-   - Calendar sync service
-   - Event caching
-
-3. **Calendar Display** (Phase 3)
-   - Month view component
-   - Event display and interaction
-
-4. **Task System** (Phase 4)
-   - Basic task CRUD operations
-   - Task completion tracking
-
-5. **Reward System** (Phase 5)
-   - Initial animation framework
-   - Points accumulation
-
-**Important:** Each feature must include:
-- ✅ Unit tests for all business logic
-- ✅ Integration test (Playwright) for user flow
-- ✅ Proper file organization in new structure
-- ✅ Documentation in code
+**Missing (85%)**:
+- Pincode authentication system
+- Google OAuth integration
+- Calendar UI and service
+- Chore management system
+- Google Sheets integration
+- Touch-optimized UI
+- Pink/rose gold theme
+- Kiosk mode configuration
+- Raspberry Pi packaging
 
 ---
 
-## Notes
-
-- This TODO list is a living document and should be updated as priorities shift
-- Each major feature should have its own git branch during development
-- Mark items complete as they are finished
-- Add new items as requirements emerge
-- **All code must include tests** - no exceptions
-- **Follow the new file structure** - no shortcuts
-- Estimated timeline:
-  - Phase 0 (Restructure): 1-2 weeks
-  - Phases 1-7 (MVP): 3-6 months
-  - Full feature set: 6-12 months including testing and polish
+**Estimated Timeline**: 18 weeks (4-5 months) to complete MVP
+**Next Immediate Steps**:
+1. Install React and dependencies (Phase 1, Critical Blockers)
+2. Set up testing infrastructure (Vitest + Playwright)
+3. Implement pincode authentication (Phase 1)
+4. Create config directory handler (Phase 1)
 
 ---
 
-**Last Updated:** 2025-11-28
+## 📊 Testing Summary
+
+### Total Testing Requirements
+
+**Unit Tests**: ~150+ test files across all phases
+- Configuration and utilities: ~15 test files
+- Services (Auth, Google APIs, Chores): ~25 test files
+- Repositories and database: ~10 test files
+- React components: ~30 test files
+- UI components and utilities: ~15 test files
+
+**Integration Tests**: ~15+ test specs
+- Authentication flow: 2 specs
+- OAuth flow: 2 specs
+- Calendar sync: 2 specs
+- Calendar UI: 1 spec
+- Chore sync: 2 specs
+- Chore UI: 1 spec
+- UI polish: 1 spec
+- Kiosk mode: 1 spec
+
+**End-to-End Tests**: ~3 comprehensive workflows
+- Complete first-time setup
+- Daily usage workflow
+- Chore management workflow
+
+**Manual Tests**: Hardware and cross-device testing
+- Raspberry Pi 4 and 5
+- Various touchscreens
+- Performance and accessibility
+
+### Test Coverage Goals
+
+| Component | Target Coverage | Priority |
+|-----------|----------------|----------|
+| Services | >70% | Critical |
+| Repositories | >70% | Critical |
+| Utilities | >70% | High |
+| React Components | >70% | High |
+| Integration Tests | 100% of major features | Critical |
+
+### Testing Tools
+
+- **Unit Testing**: Vitest + @testing-library/react
+- **Integration Testing**: Playwright (Electron)
+- **Coverage Reporting**: Vitest coverage (c8/istanbul)
+- **E2E Testing**: Playwright
+- **Visual Testing**: Playwright screenshots (optional)
+
+### Testing Best Practices
+
+1. **Write tests BEFORE or ALONGSIDE implementation** (TDD/BDD approach)
+2. **Every PR must include tests** for new features
+3. **Run tests before committing**: `npm run test`
+4. **Check coverage**: `npm run test:coverage`
+5. **Integration tests must use mocked Google APIs** (no real API calls in tests)
+6. **Use test fixtures** for consistent test data
+7. **Test error cases** not just happy paths
+8. **Keep tests isolated** (no dependencies between tests)
+
+---
+
+**Last Updated**: 2025-11-30
