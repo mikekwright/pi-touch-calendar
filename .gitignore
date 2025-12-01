@@ -1,4 +1,5 @@
 **/*.pyc
+
 .coverage
 .pytest_cache
 .venv/
@@ -68,10 +69,7 @@ out/
 .claude/history
 
 playwright-report/
-ANALYSIS_INDEX.md
-CODEBASE_ANALYSIS.md
-CODEBASE_OVERVIEW.md
-GAP_ANALYSIS.md
-KEY_CODE_SNIPPETS.md
-TODO.md
+docs/TODO.md
 test-results
+
+.claude
